@@ -51,7 +51,7 @@ rts
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.1 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
+    ps: .byt 13,"*** basic loader 0.0.2 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
 
 .endproc
 
