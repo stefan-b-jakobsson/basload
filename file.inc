@@ -120,7 +120,6 @@ loop:
     beq eof
     
 error:
-    stp
     dec index
     
     lda #0
@@ -142,7 +141,15 @@ eol:
     lda #0
     ldx index
     sta file_buf,x
-    
+
+    jsr KERNAL_READST
+    cmp #0
+    beq :+
+    cmp #64
+    beq eof
+    bra error
+
+:   lda #0
     rts
 
 index: .res 1

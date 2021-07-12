@@ -26,9 +26,17 @@
 
 .include "common.inc"
 
+lda ROM_SEL
+pha
+stz ROM_SEL
+
 jsr main_greeting
 jsr main_get_sourcefile
 jsr main_load
+
+pla
+sta ROM_SEL
+
 rts
 
 ;******************************************************************************
