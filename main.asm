@@ -72,12 +72,16 @@ rts
     bra :-
 
 eol:
-    iny
     sty file_len
 
     ldx #<msg
     ldy #>msg
     jsr ui_print
+
+    lda #<file_name
+    sta $4010
+    lda #>file_name
+    sta $4011
     rts
 
 msg: .byt   13, "loading...", 13, 0
