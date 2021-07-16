@@ -52,11 +52,30 @@ It is possible to use labels longer than twelve characters, but that may cause "
 program will stop with an error.
 
 
+## Using labels
+
+Labels are used as targets for GOTO and GOSUB commands. A label may also be used after a THEN command.
+
+To use a label, just type its name (without colon).
+
+The label need not be separated from the preceding command by a blank space or any other delimiter. BASLOAD, however, expects
+that a label continues to the end of the current statement.
+
+## Source code example
+
+Here follows a simple example illustrating the BASLOAD source code format:
+
+```
+LOOP:
+    PRINT "HELLO, WORLD"
+    GOTO LOOP
+```
+
 ## Loading and running
 
 BASLOAD resides in RAM at address $9000.
 
-If stored on the SD card, load it with LOAD BASLOAD.PRG,8,1 within the emulator.
+If stored on the SD card, load it with LOAD"BASLOAD.PRG",8,1 within the emulator.
 
 If stored in the host file system, start the emulator with x16emu -prg BASLOAD.PRG,9000 -sdcard sdcard.img
 

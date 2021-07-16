@@ -426,7 +426,7 @@ then_label:                     ;After THEN there can be a label ref or any othe
     cmp #0
     bne :+
     stz last_token
-    bra copy
+    bra chk_token
 
 :   pha                         ;Store label length on stack
 

@@ -38,8 +38,6 @@
 
     jsr main_load
 
-    jsr KERNAL_RDTIM
-
     pla
     sta ROM_SEL
 
@@ -57,7 +55,7 @@
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.2 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
+    ps: .byt 13,"*** basic loader 0.0.3 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
 .endproc
 
 ;******************************************************************************
@@ -94,7 +92,7 @@ noinput:
     rts
 
 msg: .byt   13, "loading...", 13, 0
-msg2: .byt 13, "source file not specified", 13, 0
+msg2: .byt 13, "no source file", 13, 0
 .endproc
 
 ;******************************************************************************
