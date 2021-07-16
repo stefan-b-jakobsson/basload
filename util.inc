@@ -28,6 +28,16 @@
     util_ptr: .res 2
 .CODE
 
+;******************************************************************************
+;Function name.......: util_bin_to_bcd
+;Purpose.............: Converts a binary value to a BCD value
+;Input...............: 24 bit binary value, X=low, Y=mid, A=high
+;Returns.............: Pointer to 32 bit BCD value, X=addressL, Y=addressH
+;Errors..............: None
+;Credits.............: This routine is based on Andrew Jacobs code published
+;                      here: http://www.6502.org/source/integers/hex2dec-more.htm
+;                      The function basically switches to decimal mode and then
+;                      adds the bits together
 .proc util_bin_to_bcd
     ;Store 24 bit input
     stx input
@@ -87,6 +97,12 @@ loop:
 .CODE
 .endproc
 
+;******************************************************************************
+;Function name.......: util_bcd_to_str
+;Purpose.............: Converts a BCD value to a null terminated string
+;Input...............: Pointer to 32 bit BCD value, X=AddressL, Y=AddressH
+;Returns.............: Pointer to string, X=AddressL, Y=AddressH
+;Errors..............: None
 .proc util_bcd_to_str
     ;Copy input to local memory
     stx util_ptr

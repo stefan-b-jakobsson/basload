@@ -220,6 +220,7 @@ next:
     stz count_quotes
     stz count_chars
     stz count_chars_after_label
+    stz count_labels
 
     ;Increase line numbers
     inc line_srclin
@@ -358,17 +359,33 @@ chk_labeldef:
 
 chk_labelref:
     lda last_token
+    cmp #$a7                    ;THEN
+    beq then_label
     cmp #$89                    ;GOTO
     beq :+
     cmp #$8d                    ;GOSUB
-    bne chk_token
+    beq :+
+    jmp chk_token
 
-:   ldx index_src
+:   lda count_labels            ;Check label count, if even look for label def, else look for comma delimiter between GOTO/GOSUB targets
+    and #1
+    beq :++
+
+    ldx index_src               ;Here testing for comma delimiter
+    lda file_buf,x
+    cmp #','
+    beq :+
+    stz last_token              ;Was not a comma, clear last token so we will look no further
+
+:   inc count_labels            ;Increase counter to make it even again
+    jmp copy
+
+:   ldx index_src               ;Get label
     jsr label_get
     cmp #0
     bne :+
 
-    ldx #<msg_label_expected
+    ldx #<msg_label_expected    ;Label not found error
     ldy #>msg_label_expected
     lda #%00010001
     jsr ui_msg
@@ -377,7 +394,7 @@ chk_labelref:
 
 :   pha                         ;Store label length on stack
 
-    lda #0
+    lda #0                      ;Output target line number
     jsr util_bin_to_bcd
     jsr util_bcd_to_str
     
@@ -395,12 +412,47 @@ chk_labelref:
     inx
     bra :-
 
-:   clc
+:   clc                         ;Move source code pointer forward
     pla
     adc index_src
     sta index_src
 
+    inc count_labels
+    jmp loop
+
+then_label:                     ;After THEN there can be a label ref or any other statement, therefore different to GOTO/GOSUB where there must be a label ref
+    ldx index_src
+    jsr label_get
+    cmp #0
+    bne :+
     stz last_token
+    bra copy
+
+:   pha                         ;Store label length on stack
+
+    lda #0                      ;Output target line number
+    jsr util_bin_to_bcd
+    jsr util_bcd_to_str
+    
+    stx util_ptr
+    sty util_ptr+1
+    ldx #0
+
+:   txa
+    tay 
+    lda (util_ptr),y
+    beq :+
+    ldy index_dst
+    sta (line_code),y
+    inc index_dst
+    inx
+    bra :-
+
+:   clc                         ;Move source code pointer forward
+    pla
+    adc index_src
+    sta index_src
+
     jmp loop
     
 chk_token:
@@ -447,6 +499,7 @@ next:
     count_quotes: .res 1
     count_chars: .res 1
     count_chars_after_label: .res 1
+    count_labels: .res 1
     last_token: .res 1
 .CODE
 .endproc

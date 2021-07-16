@@ -129,6 +129,8 @@ err1:
 
 eof1:
     jsr line_pass1
+    cmp #0
+    bne err1
     
     ;Pass 2
     jsr line_reset
@@ -150,6 +152,10 @@ err2:
 
 eof2:
     jsr line_pass2
+    cmp #0
+    bne err2
+
+    ;Pass2 done
     jsr file_close
     rts
 

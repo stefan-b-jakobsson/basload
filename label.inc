@@ -56,8 +56,7 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 
 ;******************************************************************************
 ;Function name: label_init
-;Purpose......: Initializes label functions for use, to be called once at the
-;               start of the program
+;Purpose......: Initializes label functions
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing

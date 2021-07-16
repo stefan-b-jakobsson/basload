@@ -32,6 +32,12 @@
     file_err: .res 1
 .CODE
 
+;******************************************************************************
+;Function name: file_init
+;Purpose......: Initializes file functions
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
 .proc file_init
     lda #8
     sta file_device
