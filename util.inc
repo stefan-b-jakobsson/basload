@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -81,9 +81,10 @@ loop:
     ldy #>output
  
     rts
-    
-input: .res 3
-output: .res 4
+.segment "VARS"
+    input: .res 3
+    output: .res 4
+.CODE
 .endproc
 
 .proc util_bcd_to_str
@@ -145,7 +146,8 @@ exit:
     tay
  
     rts
-    
-input: .res 4
-output: .res 9
+.segment "VARS"
+    input: .res 4
+    output: .res 9
+.CODE
 .endproc

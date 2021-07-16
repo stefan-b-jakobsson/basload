@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -28,64 +28,62 @@
     token_ptr: .res 2
 .CODE
 
-token_last: .res 1
+.segment "VARS"
+    token_last: .res 1
+    token_count_std: .res 1
+    token_count_ext: .res 1
+    token_maxlen: .res 1
+    token_cs_tbl: .res 7
+.CODE
 
 ;******************************************************************************
-;Function name: token_get
-;Purpose......: Searches for a BASIC token ID in the file buffer
-;Input........: X = Index where to start searching
-;Output.......: A = token ID, X = extended token ID, Y = token length
+;Function name: token_init
+;Purpose......: Initializes token functions
+;Input........: Nothing
+;Output.......: Nothing
 ;Errors.......: Nothing
-.proc token_get
-    ;Set initial values
-    stx index
-    
-    stz len
-    stz mismatch
-
-    lda #$80
-    sta token
-    stz token+1
+.proc token_init
+    lda #1
+    sta RAM_SEL
     
     lda #<tokens_std
     sta token_ptr
     lda #>tokens_std
     sta token_ptr+1
 
+    stz token_maxlen
+    stz extended
+    
     ldy #0
+    ldx #0
+    stz cs
 
 loop:
-    inc len
     lda (token_ptr),y
-    beq exit                ;Token table is null terminated, stop here
-    bmi lastchar            ;Bit 7 marks last char of a token in the token table
-
-    cmp file_buf,x
-    beq :+
-    inc mismatch            ;Mark that there was a compare error
-
-:   iny
-    inx
+    beq endoflist
+    bmi endoftoken
+    clc
+    adc cs
+    sta cs
+    iny
     bra loop
 
-lastchar:
-    ;Compare token last char
-    and #%01111111          ;Clear bit 7
-    cmp file_buf,x
-    bne next
+endoftoken:
+    and #%01111111
+    clc
+    adc cs
+    sta $a000,x
+    
+    iny
+    tya
+    sta len
+    sta $a100,x
 
-    ;Check flag for previous mismatch
-    lda mismatch
-    bne next
+    lda token_ptr
+    sta $a200,x
+    lda token_ptr+1
+    sta $a300,x
 
-    ;We have a match
-    lda token
-    ldx token+1
-    ldy len
-    rts
-
-next:
-    ;Move pointer to start of next token
     clc
     lda token_ptr
     adc len
@@ -94,53 +92,149 @@ next:
     adc #0
     sta token_ptr+1
 
-    ;Reset values
-    stz mismatch
-    stz len
-    ldy #0
-    ldx index
+    lda len
+    cmp token_maxlen
+    bcc :+
+    sta token_maxlen
 
-    ;Advcance token ID; if token+1 is not 0 we are looking for an extended token
-    lda token+1
-    beq :+
-
-    inc token+1         ;Advance extended token ID
+:   ldy #0
+    inx
+    stz cs
     bra loop
 
-:   inc token           ;Advance standard token ID
-    bra loop
-
-exit:
-    ;Have we searched for extended tokens?
-    lda token+1
-    bne :+          ;We have, exit function
-
-    ;Set values to serach for extended tokens
-    lda #$ce
-    sta token
-    lda #$80
-    sta token+1
-
+endoflist:
+    lda extended
+    bne :+
+    
+    stx token_count_std
+    
+    inc extended
     lda #<tokens_ext
     sta token_ptr
     lda #>tokens_ext
     sta token_ptr+1
-
-    stz mismatch
-    stz len
+    
     ldy #0
-    ldx index
+    stz cs
     bra loop
 
-:   lda #0
-    ldx #0
-    ldy #0
+:   stx token_count_ext
     rts
 
-index: .res 1
-len: .res 1
-token: .res 2
-mismatch: .res 1
+.segment "VARS"
+    cs: .res 1
+    len: .res 1
+    extended: .res 1
+.CODE
+.endproc
+
+;******************************************************************************
+;Function name: token_get
+;Purpose......: Searches for a BASIC token ID in the file buffer
+;Input........: X = Index where to start searching
+;Output.......: A = token ID, X = extended token ID, Y = token length
+;Errors.......: Nothing
+.proc token_get
+    ;Init
+    stx index
+    stz cs
+
+    lda #1
+    sta RAM_SEL
+
+    ;Calculate checksum table
+    ldy #0
+:   lda file_buf,x
+    beq :+
+    cmp #32
+    beq :+
+    clc
+    adc cs
+    sta cs
+    sta token_cs_tbl,y
+    inx
+    iny
+    cpy token_maxlen
+    bne :-
+
+:   stx possible_len
+    
+    ldx #0
+loop:
+    ;Test len
+    lda $a100,x
+    sta len
+    cmp possible_len
+    beq :+
+    bcs nexttoken
+
+    ;Test checksum
+:   tay
+    lda $a000,x
+    cmp token_cs_tbl-1,y
+    bne nexttoken
+
+    ;Compare name
+    lda $a200,x
+    sta token_ptr
+    lda $a300,x
+    sta token_ptr+1
+
+    stx tokenid
+
+    ldy #0
+    ldx index
+:   lda (token_ptr),y
+    and #%01111111
+    cmp file_buf,x
+    bne :+
+    inx
+    iny
+    cpy len
+    beq ismatch
+    bra :-
+
+:   ldx tokenid
+
+nexttoken:
+    inx
+    cpx token_count_ext
+    bcc loop
+
+    ldx #0
+    ldy #0
+    lda #0
+
+    rts
+
+ismatch:
+    lda tokenid
+
+    cmp token_count_std
+    bcs :+
+    
+    clc
+    adc #$80
+    ldx #0
+    ldy len
+    rts
+
+:   sec
+    sbc token_count_std
+    clc
+    adc #$80
+    tax
+    lda #$ce
+    ldy len
+    rts
+
+.segment "VARS"
+    index: .res 1
+    len: .res 1
+    cs: .res 1
+    possible_len: .res 1
+    tokenid: .res 1
+.CODE
 .endproc
 
 tokens_std:

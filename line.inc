@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,10 @@
     line_code: .res 2
 .CODE
 
-line_srclin: .res 3
-line_dstlin: .res 2
-
+.segment "VARS"
+    line_srclin: .res 3
+    line_dstlin: .res 2
+.CODE
 
 ;******************************************************************************
 ;Function name: line_reset
@@ -196,11 +197,13 @@ next:
     inc index_src
     jmp loop
 
-index_src: .res 1
-label_found: .res 1
-count_chars: .res 1
-count_chars_after_label: .res 1
-len: .res 1
+.segment "VARS"
+    index_src: .res 1
+    label_found: .res 1
+    count_chars: .res 1
+    count_chars_after_label: .res 1
+    len: .res 1
+.CODE
 .endproc
 
 ;******************************************************************************
@@ -437,11 +440,13 @@ next:
     inc index_src
     jmp loop
 
-index_src: .res 1
-index_dst: .res 1
-nxtlinptr: .res 2
-count_quotes: .res 1
-count_chars: .res 1
-count_chars_after_label: .res 1
-last_token: .res 1
+.segment "VARS"
+    index_src: .res 1
+    index_dst: .res 1
+    nxtlinptr: .res 2
+    count_quotes: .res 1
+    count_chars: .res 1
+    count_chars_after_label: .res 1
+    last_token: .res 1
+.CODE
 .endproc

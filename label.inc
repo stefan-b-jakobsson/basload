@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,9 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
     label_ptr: .res 2
 .CODE
 
-label_count: .res LABEL_BUCKET_COUNT
+.segment "VARS"
+    label_count: .res LABEL_BUCKET_COUNT
+.CODE
 
 ;******************************************************************************
 ;Function name: label_init
@@ -156,11 +158,12 @@ label_count: .res LABEL_BUCKET_COUNT
     ldy len
     rts
 
-index: .res 1
-len: .res 1
-cs: .res 1
-bucket: .res 1
-msg_bucket: .byt "bucket: ",0
+.segment "VARS"
+    index: .res 1
+    len: .res 1
+    cs: .res 1
+    bucket: .res 1
+.CODE
 .endproc
 
 ;******************************************************************************
@@ -279,11 +282,13 @@ next:
 
     bra loop
 
-index: .res 1
-len: .res 1
-cs: .res 1
-bucket: .res 1
-bucket_index: .res 1
+.segment "VARS"
+    index: .res 1
+    len: .res 1
+    cs: .res 1
+    bucket: .res 1
+    bucket_index: .res 1
+.CODE
 .endproc
 
 ;******************************************************************************
@@ -346,9 +351,11 @@ invalid:
     ldy #0
     rts
 
-index: .res 1
-len: .res 1
-cs: .res 1
+.segment "VARS"
+    index: .res 1
+    len: .res 1
+    cs: .res 1
+.CODE
 .endproc
 
 ;******************************************************************************
@@ -397,12 +404,12 @@ next:
 
 exit:
     lda cs
-    sta $4001
     ldy len
-    sty $4002
     rts
 
-index: .res 1
-len: .res 1
-cs: .res 1
+.segment "VARS"
+    index: .res 1
+    len: .res 1
+    cs: .res 1
+.CODE
 .endproc

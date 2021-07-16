@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -110,20 +110,15 @@ msg:
 
     lda #13
     jsr KERNAL_CHROUT
-
-    ldx #<file_buf
-    ldy #>file_buf
-    jsr ui_print
-    lda #13
-    jsr KERNAL_CHROUT
     
     rts
     
-
-flags:      .res 1
 msg_warn:   .byt "warning",0
 msg_err:    .byt "error",0
 msg_line:   .byt " in line ",0
 msg_line2:  .byt ": ",0
 
+.segment "VARS"
+    flags: .res 1
+.CODE
 .endproc

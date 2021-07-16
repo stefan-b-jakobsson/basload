@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@ KERNAL_CHKIN = $ffc6
 KERNAL_CHRIN = $ffcf
 KERNAL_READST = $ffb7
 KERNAL_CHROUT = $ffd2
+KERNAL_RDTIM = $ffde
 
 RAM_SEL = $9f61
 ROM_SEL = $9f60

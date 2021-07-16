@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,19 @@
 ;OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-file_name: .res 256
-file_len: .res 1
-file_device: .byt 8
-file_err: .res 1
-file_buf: .res 256
+.segment "VARS"
+    file_name: .res 256
+    file_buf: .res 256
+    file_len: .res 1
+    file_device: .res 1
+    file_err: .res 1
+.CODE
+
+.proc file_init
+    lda #8
+    sta file_device
+    rts
+.endproc
 
 ;******************************************************************************
 ;Function name: file_open
@@ -152,7 +160,9 @@ eol:
 :   lda #0
     rts
 
-index: .res 1
+.segment "VARS"
+    index: .res 1
+.CODE
 .endproc
 
 ;******************************************************************************
@@ -220,8 +230,10 @@ err:
     sta file_err
     rts
 
-index: .res 1
-code: .res 1
+.segment "VARS"
+    index: .res 1
+    code: .res 1
+.CODE
 .endproc
 
 file_ioerr_L:

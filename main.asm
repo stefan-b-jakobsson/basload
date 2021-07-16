@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, stefan-b-jakobsson
+;Copyright (c) 2021, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -26,18 +26,24 @@
 
 .include "common.inc"
 
-lda ROM_SEL
-pha
-stz ROM_SEL
+    jsr main_greeting
+    jsr main_get_sourcefile
+    lda file_len
+    bne :+
+    rts
 
-jsr main_greeting
-jsr main_get_sourcefile
-jsr main_load
+:   lda ROM_SEL
+    pha
+    stz ROM_SEL
 
-pla
-sta ROM_SEL
+    jsr main_load
 
-rts
+    jsr KERNAL_RDTIM
+
+    pla
+    sta ROM_SEL
+
+    rts
 
 ;******************************************************************************
 ;Function name: main_greeting
@@ -52,7 +58,6 @@ rts
     rts
 
     ps: .byt 13,"*** basic loader 0.0.2 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
-
 .endproc
 
 ;******************************************************************************
@@ -74,17 +79,22 @@ rts
 eol:
     sty file_len
 
+    cpy #0
+    beq noinput
+
     ldx #<msg
     ldy #>msg
     jsr ui_print
+    rts
 
-    lda #<file_name
-    sta $4010
-    lda #>file_name
-    sta $4011
+noinput:
+    ldx #<msg2
+    ldy #>msg2
+    jsr ui_print
     rts
 
 msg: .byt   13, "loading...", 13, 0
+msg2: .byt 13, "source file not specified", 13, 0
 .endproc
 
 ;******************************************************************************
@@ -94,6 +104,8 @@ msg: .byt   13, "loading...", 13, 0
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_load
+    jsr file_init
+    jsr token_init
     jsr line_reset
     jsr label_init
 
