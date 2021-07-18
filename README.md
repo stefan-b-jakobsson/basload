@@ -8,7 +8,7 @@ BASLOAD is best described as a BASIC tokenizer. It takes BASIC source code store
 the file, it's tokenized so that it can be run by the built-in BASIC interpreter.
 
 The purpose of BASLOAD is to enhance the programming experience by letting you edit BASIC source code in the editor of your choosing without using line numbers. Instead of
-ine numbers, named labels are defined as targets for GOTO and GOSUB statements and after THEN statements.
+line numbers, named labels are defined as targets for GOTO and GOSUB statements and after THEN commands.
 
 ## Creating source files
 
@@ -16,19 +16,20 @@ The source files may be created by any means if the following requirements are m
 
 * The source file must be stored on disk (the X16's SD card)
 * The content of the file must be plain PETSCII encoded text
+* Line breaks are encoded with CR and/or LF (any combination thereof should work)
 * Lines may not be longer than 250 characters
 * The source file may not be more than 1,677,215 lines (24 bit counter)
 * The resulting BASIC code may not be more than 65,535 lines (16 bit counter, a limitation of the platform)
 
-Line numbers are not used in source files. Instead you define named labels as target for GOTO,  GOSUB and THEN statements.
+Line numbers are not used in source files. Instead you define named labels as target for GOTO,  GOSUB and THEN commands.
 
 Apart from that, the BASIC code is the same as when you program directly in the built-in BASIC editor on the X16.
 
 ## Defining labels
 
-Labels are defined at the beginning of a line in the source file. It is, however, allowed to blank spaces before the start of a label definition.
+Labels are defined at the beginning of a line in the source file. It is, however, allowed to put blank spaces before the start of a label definition.
 
-The first character of a label must be within A-Z. The subsequent characters may also contain digits. No other characters are allowed in the label name.
+The first character of a label must be within A-Z. The subsequent characters may also contain digits. No other characters are allowed in a label name.
 
 A label definition is ended by a colon (':').
 
@@ -47,7 +48,7 @@ The symbol table where the labels are stored is in banked RAM and may for now ho
 * At most the first twelve characters of the label name
 * The length of the label name
 * A checksum, calculated by adding the PETSCII values of the label name
-* A line number in the tokenized BASIC code
+* The line number in the tokenized BASIC code whereto the label points
 
 It is possible to use labels longer than twelve characters, but that may cause "false" duplicates. BASLOAD will warn you about this, and if there is an actual duplicate definition (true or false), the
 program will stop with an error.
