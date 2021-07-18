@@ -8,7 +8,7 @@ BASLOAD is best described as a BASIC tokenizer. It takes BASIC source code store
 the file, it's tokenized so that it can be run by the built-in BASIC interpreter.
 
 The purpose of BASLOAD is to enhance the programming experience by letting you edit BASIC source code in the editor of your choosing without using line numbers. Instead of
-line numbers, named labels are defined as targets for GOTO and GOSUB statements and after THEN commands.
+line numbers, named labels are defined as targets for GOTO and GOSUB and after THEN commands.
 
 ## Creating source files
 
