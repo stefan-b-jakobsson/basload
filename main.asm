@@ -32,15 +32,30 @@
     bne :+
     rts
 
-:   lda ROM_SEL
+
+:   lda KERNAL_VERSION
+    cmp #$da                ;R38
+    bne :+
+    lda ROM_SEL_R38
     pha
-    stz ROM_SEL
+    stz ROM_SEL_R38
+    bra :++
 
-    jsr main_load
+:   lda ROM_SEL_R39         ;Other
+    pha
+    stz ROM_SEL_R39
 
+:   jsr main_load
+
+:   lda KERNAL_VERSION
+    cmp #$da                ;R38
+    bne :+
     pla
-    sta ROM_SEL
+    sta ROM_SEL_R38
+    rts
 
+:   pla
+    sta ROM_SEL_R39
     rts
 
 ;******************************************************************************
@@ -55,7 +70,7 @@
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.3 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
+    ps: .byt 13,"*** basic loader 0.0.4 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
 .endproc
 
 ;******************************************************************************

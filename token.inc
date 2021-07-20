@@ -44,7 +44,8 @@
 ;Errors.......: Nothing
 .proc token_init
     lda #1
-    sta RAM_SEL
+    sta RAM_SEL_R38
+    sta RAM_SEL_R39
     
     lda #<tokens_std
     sta token_ptr
@@ -140,7 +141,8 @@ endoflist:
     stz cs
 
     lda #1
-    sta RAM_SEL
+    sta RAM_SEL_R38
+    sta RAM_SEL_R39
 
     ;Calculate checksum table
     ldy #0

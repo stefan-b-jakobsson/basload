@@ -194,7 +194,8 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
     lsr
     ina
     ina
-    sta RAM_SEL
+    sta RAM_SEL_R38
+    sta RAM_SEL_R39
 
     ;Set pointer to start of bucket
     stz label_ptr
