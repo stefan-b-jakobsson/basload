@@ -44,8 +44,7 @@
 ;Errors.......: Nothing
 .proc token_init
     lda #1
-    sta RAM_SEL_R38
-    sta RAM_SEL_R39
+    sta (RAM_SEL)
     
     lda #<tokens_std
     sta token_ptr
@@ -141,8 +140,7 @@ endoflist:
     stz cs
 
     lda #1
-    sta RAM_SEL_R38
-    sta RAM_SEL_R39
+    sta (RAM_SEL)
 
     ;Calculate checksum table
     ldy #0
@@ -159,7 +157,7 @@ endoflist:
     cpy token_maxlen
     bne :-
 
-:   stx possible_len
+:   sty possible_len
     
     ldx #0
 loop:

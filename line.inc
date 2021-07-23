@@ -35,13 +35,13 @@
 .CODE
 
 ;******************************************************************************
-;Function name: line_reset
-;Purpose......: Resets all pointers to start values, to be called once before
-;               pass 1 and once before pass 2
+;Function name: line_init
+;Purpose......: Initializes all pointers to start values, to be called once 
+;               before pass 1 and once before pass 2
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
-.proc line_reset
+.proc line_init
     lda #$01
     sta line_meta
     lda #$05

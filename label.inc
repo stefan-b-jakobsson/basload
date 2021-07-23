@@ -61,9 +61,9 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc label_init
+    ;Clear label count in each bucket
     ldx #0
     lda #0
-
 :   sta label_count,x
     inx
     cpx #LABEL_BUCKET_COUNT
@@ -81,6 +81,7 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 ;               Y = label length
 ;Errors.......: Nothing
 .proc label_add
+    ;Init
     stx index
     stz len
 
@@ -135,12 +136,12 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
     lda len
     sta (label_ptr),y
 
-    ;Store checksum
+    ;Store label checksum
     ldy #13
     lda cs
     sta (label_ptr),y
 
-    ;Store line number
+    ;Store line number label points to
     ldy #14
     lda line_dstlin
     sta (label_ptr),y
@@ -148,11 +149,11 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
     lda line_dstlin+1
     sta (label_ptr),y
 
-    ;Increase bucket counter
+    ;Increase label count in bucket
     ldx bucket
     inc label_count,x
 
-    ;Set return values5
+    ;Set return values
     lda #0
     ldy len
     rts
@@ -173,8 +174,10 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 ;               A = label length or 0 if not found
 ;Errors.......: Nothing
 .proc label_get
+    ;Init
     stx index
 
+    ;Check label format
     jsr label_val_ref
     sta cs
     sty len
@@ -188,30 +191,29 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 
 :   ;Select RAM bank for the bucket
     lda cs
-    and #7
+    and #(LABEL_BUCKET_COUNT-1)
     sta bucket
     
     lsr
     ina
     ina
-    sta RAM_SEL_R38
-    sta RAM_SEL_R39
+    sta (RAM_SEL)
 
     ;Set pointer to start of bucket
-    stz label_ptr
+    stz label_ptr       ;LSB
 
     lda bucket
     and #1
     bne :+
 
     lda #$a0
-    sta label_ptr+1
+    sta label_ptr+1     ;MSB
     bra :++
 
 :   lda #$b0
-    sta label_ptr+1
+    sta label_ptr+1     ;MSB
 
-    ;Check if bucket is empty
+    ;Check if bucket is empty, if so return no label found
 :   ldx bucket
     lda label_count,x
     cmp #0
@@ -221,20 +223,21 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 
 :   stz bucket_index
 
+    ;Loop over stored labels looking for a match
 loop:
-    ;Validate checksum
+    ;First: Compare hecksums
     ldy #13
     lda (label_ptr),y
     cmp cs
     bne next
 
-    ;Validate length
+    ;Second: Compare lengths
     dey
     lda (label_ptr),y
     cmp len
     bne next
 
-    ;Check name
+    ;Third: Compare names
     ldy #0
     ldx index
 :   
@@ -243,12 +246,13 @@ loop:
     bne next
     inx
     iny
-    cpy #12
+    cpy #12             ;Max 12 chars of the label name is stored in the symbol table, stop looking, treat like a match, even though it might be false
     bcs found
-    cpy len
+    cpy len             ;We reached the label len without compare errors, a match
     bne :-
 
 found:
+    ;Get line number
     ldy #14
     lda (label_ptr),y
     tax
@@ -256,10 +260,12 @@ found:
     lda (label_ptr),y
     tay
     
+    ;Get len
     lda len
     rts
 
 next:
+    ;Move pointer to next label
     clc
     lda label_ptr
     adc #16
@@ -268,15 +274,18 @@ next:
     adc #0
     sta label_ptr+1
 
+    ;Increase index
     inc bucket_index
     lda bucket_index
     ldx bucket
     cmp label_count,x
     bcc :+
 
+    ;Not found
     lda #0
     rts
 
+    ;Keep looking for a match...
 :   ldx index
     ldy #0
 
@@ -299,6 +308,7 @@ next:
 ;               Y = Label length or 0 if invalid format 
 ;Errors.......: Nothing
 .proc label_val_def
+    ;Init
     stx index
     stz len
     stz cs
@@ -331,10 +341,12 @@ loop:
     bcs invalid
 
 next:
+    ;Update checksum
     clc
     adc cs
     sta cs
 
+    ;Increase index
     inx
     inc len
     bra loop
@@ -366,6 +378,7 @@ invalid:
 ;               A = Checksum
 ;Errors.......: Nothing
 .proc label_val_ref
+    ;Init
     stx index
     stz len
     stz cs
@@ -394,10 +407,12 @@ loop:
     bcs exit
 
 next:
+    ;Update checksum
     clc
     adc cs
     sta cs
 
+    ;Move pointer
     inx
     inc len
     bra loop

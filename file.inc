@@ -39,6 +39,7 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc file_init
+    ;Set device no
     lda #8
     sta file_device
     rts
@@ -51,6 +52,7 @@
 ;Output.......: Nothing
 ;Errors.......: A = error code or 0 if no error
 .proc file_open
+    ;Clear error
     stz file_err
 
     ;Ensure file #1 is closed
@@ -101,19 +103,20 @@ err:
 ;Purpose......: Reads one line from the source file and stores it into a
 ;               buffer
 ;Input........: Nothing
-;Output.......: A = 1 if EOF, A = 2 if file error, A = 3 line too long,
-;               else A = 0
+;Output.......: A = 1 if EOF, A = 2 if file error, else A = 0
 ;Errors.......: Nothing
 .proc file_readln
     stz index
     
 loop:
+    ;Read char from file
     jsr KERNAL_CHRIN
-    cmp #10
+    cmp #10                 ;LF
     beq eol
-    cmp #13
+    cmp #13                 ;CR
     beq eol
 
+    ;Check line length
     ldx index
     cpx #250
     bcc :+
@@ -124,46 +127,47 @@ loop:
     lda #2
     rts
 
+    ;Store char in buffer
 :   sta file_buf,x
     inc index
 
+    ;Read file status
     jsr KERNAL_READST
-    cmp #0
+    cmp #0                  ;Status = 0 => Continue reading
     beq loop
-    cmp #64                 ;End of file, no errors
+    cmp #64                 ;Status = 64 => End of file without errors
     beq eof
     
-error:
-    dec index
-    
+error:                      ;Status != 0 && != 64 => An error
+    dec index               ;Discard last char, wasn't valid
     lda #0
     ldx index
     sta file_buf,x
 
-    lda #2
+    lda #2                  ;Return code = 2 => Error
     rts
 
 eof:    
-    lda #0
+    lda #0                  ;Set NULL at end of line
     ldx index
     sta file_buf,x
 
-    lda #1
+    lda #1                  ;Return code = 1 => EOF
     rts
 
 eol:
-    lda #0
+    lda #0                  ;Set NULL at end of line
     ldx index
     sta file_buf,x
 
-    jsr KERNAL_READST
-    cmp #0
+    jsr KERNAL_READST       ;Read file status
+    cmp #0                  ;0 = OK
     beq :+
-    cmp #64
+    cmp #64                 ;64 = EOF
     beq eof
-    bra error
+    bra error               ;Other values => An error
 
-:   lda #0
+:   lda #0                  ;Return code = 0 => OK, not EOF
     rts
 
 .segment "VARS"
@@ -178,20 +182,25 @@ eol:
 ;Output.......: A = status code in BCD format
 ;Errors.......: Nothing
 .proc file_status
+    ;Init
     stz file_err
     stz index
 
+    ;Ensure file #15 is closed
     lda #15
     jsr KERNAL_CLOSE
 
+    ;Set empty file name, len=0, doesn't matter whereto X and Y points
     lda #0
     jsr KERNAL_SETNAM
 
+    ;Set file params
     lda #15
     ldx file_device
     ldy #15
     jsr KERNAL_SETLFS
 
+    ;Open file
     jsr KERNAL_OPEN
     bcs err
 
@@ -199,22 +208,27 @@ eol:
     jsr KERNAL_CHKIN
 
 loop:
+    ;Read char
     jsr KERNAL_CHRIN
     ldx index
     sta file_buf,x
     inc index
 
+    ;Read file status
     jsr KERNAL_READST
     beq loop
 
+    ;Set NULL at end of buffer
     ldx index
     lda #0
     sta file_buf,x
 
+    ;Close file
     lda #15
     jsr KERNAL_CLOSE
     jsr KERNAL_CLRCHN
 
+    ;Format status code as BCD value
     sec
     lda file_buf
     sbc #48
@@ -241,6 +255,9 @@ err:
     code: .res 1
 .CODE
 .endproc
+
+;******************************************************************************
+;Kernal I/O error messages
 
 file_ioerr_L:
     .byt <file_ioerr_1, <file_ioerr_2, <file_ioerr_3, <file_ioerr_4, <file_ioerr_5, <file_ioerr_6, <file_ioerr_7, <file_ioerr_8, <file_ioerr_9

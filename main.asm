@@ -26,41 +26,76 @@
 
 .include "common.inc"
 
+    ;Initialize
+    jsr main_init
+
+    ;Select Kernal ROM bank
+    lda (ROM_SEL)
+    pha
+    lda #0
+    sta (ROM_SEL)
+
+    ;Display program info and ask user for a source file
     jsr main_greeting
     jsr main_get_sourcefile
     lda file_len
-    bne :+
-    rts
+    beq exit
 
-
-:   lda KERNAL_VERSION
-    cmp #$da                ;R38
-    bne :+
-    lda ROM_SEL_R38
-    pha
-    stz ROM_SEL_R38
-    bra :++
-
-:   lda ROM_SEL_R39         ;Other
-    pha
-    stz ROM_SEL_R39
-
-:   jsr main_load
-
-:   lda KERNAL_VERSION
-    cmp #$da                ;R38
-    bne :+
-    pla
-    sta ROM_SEL_R38
-    rts
-
-:   pla
-    sta ROM_SEL_R39
+    ;Start loading...
+    jsr main_load
+    
+    ;We're done, reset ROM bank to its original value
+exit:
+    pla     
+    sta (ROM_SEL)
     rts
 
 ;******************************************************************************
+;Function name: main_init
+;Purpose......: Initializes main functions
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
+.proc main_init
+    ;Need to declare this beforehand, otherwise the compiler doesn't know it's in ZP
+    .ZEROPAGE
+        fv: .res 2
+    .CODE
+    
+    ;Get Kernal version (bank 0/$ff80), we must use Kernal FETVEC function as we do not yet know how to set the ROM bank
+    lda #<KERNAL_VERSION
+    sta fv
+    lda #>KERNAL_VERSION
+    sta fv+1
+    ldy #0
+    lda #fv
+    jsr KERNAL_FETVEC
+
+    cmp #$da
+    bne :+
+    
+    lda #$61                     ;Version: R38
+    sta RAM_SEL
+    lda #$60
+    sta ROM_SEL
+    lda #$9f
+    sta RAM_SEL+1
+    sta ROM_SEL+1
+    rts
+
+:   lda #$01                    ;Version: other
+    sta ROM_SEL
+    lda #$00
+    sta RAM_SEL
+    sta ROM_SEL+1
+    sta RAM_SEL+1
+    rts
+
+.endproc
+
+;******************************************************************************
 ;Function name: main_greeting
-;Purpose......: Prints program greeting
+;Purpose......: Displays a program greeting
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
@@ -75,7 +110,7 @@
 
 ;******************************************************************************
 ;Function name: main_get_sourcefile
-;Purpose......: Prompts the user for the source file name
+;Purpose......: Prompts the user for a source file name to be loaded
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
@@ -117,15 +152,18 @@ msg2: .byt 13, "no source file", 13, 0
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_load
+    ;Prepare pass 1
     jsr file_init
     jsr token_init
-    jsr line_reset
+    jsr line_init
     jsr label_init
 
+    ;Open source file
     jsr file_open
     cmp #0
     bne err1
 
+    ;Read and process each line
 :   jsr file_readln
     cmp #1
     beq eof1
@@ -145,10 +183,13 @@ eof1:
     cmp #0
     bne err1
     
-    ;Pass 2
-    jsr line_reset
+    ;Prepare pass 2
+    jsr line_init
+
+    ;Open source file
     jsr file_open
 
+    ;Read and process each line again
 pass2_loop:
     jsr file_readln
     cmp #1
@@ -168,7 +209,7 @@ eof2:
     cmp #0
     bne err2
 
-    ;Pass2 done
+    ;We're done
     jsr file_close
     rts
 
@@ -176,14 +217,16 @@ eof2:
 
 ;******************************************************************************
 ;Function name: main_print_disk_status
-;Purpose......: Displays disk status
+;Purpose......: Displays disk status message
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_print_disk_status
+    ;Check if there was a Kernal I/O error, i.e. before disk communication begun
     lda file_err
     beq :+
 
+    ;Print I/O error message
     tax
     dex
     lda file_ioerr_H,x
@@ -196,11 +239,12 @@ eof2:
     stz file_err
     rts
 
-:   jsr file_status
-    cmp #0
-    beq :+
+    ;Else get and print status retrieved from the disk if there was an error
+:   jsr file_status         ;Gets and stores disk status in file_buf
+    cmp #0                  ;A = Status code
+    beq :+                  ;0 => No error, exit without printing anything
 
-    ldx #<(file_buf)
+    ldx #<(file_buf)        ;Print disk status
     ldy #>(file_buf)
     lda #%00000001
     jsr ui_msg
