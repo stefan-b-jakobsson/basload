@@ -40,9 +40,9 @@
 ;Function name: token_init
 ;Purpose......: Initializes token functions. This function mainly reads 
 ;               through all tokens storing a checksum, the length of the
-;               token, a pointer to address where the token name starts in
+;               token, a pointer to the token name start in
 ;               the list of tokens. This information is later used to
-;               enhange token search performance.
+;               enhance token search performance.
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
