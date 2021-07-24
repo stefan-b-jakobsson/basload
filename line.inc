@@ -42,6 +42,7 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc line_init
+    ;Set pointers to start of BASIC memory
     lda #$01
     sta line_meta
     lda #$05
@@ -50,16 +51,19 @@
     sta line_meta+1
     sta line_code+1
 
+    ;Mark end of program at start of BASIC memory
     lda #0
     ldy #0
     sta (line_meta),y
     iny
     sta (line_meta),y
 
+    ;Init source line counter
     stz line_srclin
     stz line_srclin+1
     stz line_srclin+2
 
+    ;Init destination line counter
     stz line_dstlin
     stz line_dstlin+1
 
@@ -68,10 +72,10 @@
 
 ;******************************************************************************
 ;Function name: line_pass1
-;Purpose......: Load pass 1 function, looks for label defintions
+;Purpose......: Load pass 1; looks for label defintions
 ;Input........: Nothing
-;Output.......: Nothing
-;Errors.......: A = 1 if error occured, else A = 0
+;Output.......: A = 0 if OK
+;Errors.......: A = 1 if error occured
 .proc line_pass1
     ;Init
     stz index_src
@@ -208,10 +212,10 @@ next:
 
 ;******************************************************************************
 ;Function name: line_pass2
-;Purpose......: Load pass 2 function, enters BASIC code into memory
+;Purpose......: Load pass 2; enters BASIC code into memory
 ;Input........: Nothing
-;Output.......: Nothing
-;Errors.......: A = 1 if error occured, else A = 0
+;Output.......: A = 0 if OK
+;Errors.......: A = 1 if error occured
 .proc line_pass2
     ;Init
     stz last_token
@@ -222,19 +226,22 @@ next:
     stz count_chars_after_label
     stz count_labels
 
-    ;Increase line numbers
+    ;Increase source line counter
     inc line_srclin
     bne :+
     inc line_srclin+1
     bne :+
     inc line_srclin+2
+    beq :++                         ;Line overflow
 
+    ;Increase destination line counter
 :   inc line_dstlin
     bne loop
     inc line_dstlin+1
     bne loop
 
-    ldx #<msg_line_num_overflow         ;Line number overflow, i.e. greater than 65,535
+    ;Line number overflow
+:   ldx #<msg_line_num_overflow
     ldy #>msg_line_num_overflow
     lda #%00010001
     jsr ui_msg
@@ -245,77 +252,15 @@ loop:
     ldx index_src
     lda file_buf,x
     bne chk_rem
+    jmp eol                 ;Last char was 0 => end of line
 
-    ;End of line
-    lda count_chars_after_label
-    bne :++
-    lda line_dstlin
-    bne :+
-    dec line_dstlin+1
-:   dec line_dstlin
-    lda #0
-    rts
-    
-:   ldy index_dst
-    lda #0                      ;Set end of line marker
-    sta (line_code),y
-    inc index_dst
-
-    clc                         ;Address of start of next line
-    lda line_code
-    adc index_dst
-    sta nxtlinptr
-    lda line_code+1
-    adc #0
-    sta nxtlinptr+1
-
-    ldy #0                      ;Set current line metadata: pointer to start of next line
-    lda nxtlinptr
-    sta (line_meta),y
-    iny
-    lda nxtlinptr+1
-    sta (line_meta),y
-
-    iny                         ;Set current line metadata: line number
-    lda line_dstlin
-    sta (line_meta),y
-    sta KERNAL_LINNUM
-    iny
-    lda line_dstlin+1
-    sta KERNAL_LINNUM+1
-    sta (line_meta),y
-
-    lda nxtlinptr
-    sta line_meta
-    lda nxtlinptr+1
-    sta line_meta+1
-    
-    clc
-    lda nxtlinptr
-    adc #4
-    sta line_code
-    sta KERNAL_VARTAB
-    lda nxtlinptr+1
-    adc #0
-    sta line_code+1
-    sta KERNAL_VARTAB+1
-
-    lda #0                      
-    ldy #0
-    sta (line_meta),y
-    iny
-    sta (line_meta),y
-
-    lda #0                      ;No error
-    rts
-
-chk_rem:
+chk_rem:                    ;After a REM statement, just copy the rest of the line unaltered
     ldy last_token
     cpy #$8f
     bne chk_blnk
     jmp copy
 
-chk_blnk:
+chk_blnk:                   ;Check if last char was a blank space; if yes ignore if outside string, copy to destination if within string
     cmp #32
     bne :++
     
@@ -328,19 +273,19 @@ chk_blnk:
 :   inc count_chars
     inc count_chars_after_label
 
-chk_quote:
+chk_quote:                  ;Check if last char was a double quote; if yes, increase counter
     cmp #34
     bne chk_instr
     inc count_quotes
     jmp copy
 
-chk_instr:
+chk_instr:                  ;Check if we are within a string; if yes, just copy char to destination unaltered
     lda count_quotes
     and #1
     beq chk_labeldef
-    jmp copy                    ;Within strings, we just copy input to destination
+    jmp copy
 
-chk_labeldef:
+chk_labeldef:               ;Check if we are at start of a label definition; if yes, skip over that
     lda count_chars
     cmp #1
     bne chk_labelref
@@ -357,13 +302,13 @@ chk_labeldef:
     stz count_chars_after_label
     jmp loop
 
-chk_labelref:
+chk_labelref:                   ;After GOTO, GOSUB and THEN there may be a label reference, check that
     lda last_token
-    cmp #$a7                    ;THEN
+    cmp #$a7                    ;THEN token id
     beq then_label
-    cmp #$89                    ;GOTO
+    cmp #$89                    ;GOTO token id
     beq :+
-    cmp #$8d                    ;GOSUB
+    cmp #$8d                    ;GOSUB token id
     beq :+
     jmp chk_token
 
@@ -455,7 +400,7 @@ then_label:                     ;After THEN there can be a label ref or any othe
 
     jmp loop
     
-chk_token:
+chk_token:                      ;Check if we are at start of a BASIC command that is to be translated to a token
     ldx index_src
     jsr token_get
     cmp #0
@@ -481,16 +426,80 @@ chk_token:
     sta index_src
     jmp loop
 
-copy:
+copy:                           ;This copies the last character to the destination unaltered
     ldx index_src
     ldy index_dst
     lda file_buf,X
     sta (line_code),y
     inc index_dst
 
-next:
+next:                           ;Moves to next char on the current line
     inc index_src
     jmp loop
+
+eol:                            ;End of line handling, 
+    lda count_chars_after_label
+    bne :++
+    
+    lda line_dstlin             ;No BASIC statement on the current line (blank or only label definition) - decrease destination line counter as we are not outputting anything
+    bne :+
+    dec line_dstlin+1
+:   dec line_dstlin
+    lda #0
+    rts
+    
+:   ldy index_dst               ;Set end of line marker
+    lda #0                     
+    sta (line_code),y
+    inc index_dst
+
+    clc                         ;Address of start of next line
+    lda line_code
+    adc index_dst
+    sta nxtlinptr
+    lda line_code+1
+    adc #0
+    sta nxtlinptr+1
+
+    ldy #0                      ;Set current line metadata: pointer to start of next line
+    lda nxtlinptr
+    sta (line_meta),y
+    iny
+    lda nxtlinptr+1
+    sta (line_meta),y
+
+    iny                         ;Set current line metadata: line number
+    lda line_dstlin
+    sta (line_meta),y
+    sta KERNAL_LINNUM
+    iny
+    lda line_dstlin+1
+    sta KERNAL_LINNUM+1
+    sta (line_meta),y
+
+    lda nxtlinptr
+    sta line_meta
+    lda nxtlinptr+1
+    sta line_meta+1
+    
+    clc
+    lda nxtlinptr
+    adc #4
+    sta line_code
+    sta KERNAL_VARTAB
+    lda nxtlinptr+1
+    adc #0
+    sta line_code+1
+    sta KERNAL_VARTAB+1
+
+    lda #0                      
+    ldy #0
+    sta (line_meta),y
+    iny
+    sta (line_meta),y
+
+    lda #0                      ;No error
+    rts
 
 .segment "VARS"
     index_src: .res 1

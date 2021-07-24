@@ -47,10 +47,14 @@
 
 ;******************************************************************************
 ;Function name: file_open
-;Purpose......: Opens a source file for reading
+;Purpose......: Opens a source file for reading; before calling, store
+;               file name in variable "file_name", file name length
+;               in variable "file_len", and device number in
+;               variable "file_device". The device defaults to 8 if
+;               you have called the file_init function.
 ;Input........: Nothing
-;Output.......: Nothing
-;Errors.......: A = error code or 0 if no error
+;Output.......: A = 0 if file open is successful
+;Errors.......: A = error code (!= 0)
 .proc file_open
     ;Clear error
     stz file_err
@@ -100,11 +104,13 @@ err:
 
 ;******************************************************************************
 ;Function name: file_readln
-;Purpose......: Reads one line from the source file and stores it into a
-;               buffer
+;Purpose......: Reads one line from the source file and stores it in the
+;               "file_buf" buffer
 ;Input........: Nothing
-;Output.......: A = 1 if EOF, A = 2 if file error, else A = 0
-;Errors.......: Nothing
+;Output.......: A = 0 if OK but not EOF
+;               A = 1 if OK and EOF
+;Errors.......: A = 2 if error reading line, call function "file_status" to
+;               read the error code and message
 .proc file_readln
     stz index
     
@@ -180,6 +186,7 @@ eol:
 ;Purpose......: Reads disk status
 ;Input........: Nothing
 ;Output.......: A = status code in BCD format
+;               Complete status message stored in "file_buf" buffer
 ;Errors.......: Nothing
 .proc file_status
     ;Init

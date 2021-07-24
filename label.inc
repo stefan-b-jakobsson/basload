@@ -168,7 +168,7 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 
 ;******************************************************************************
 ;Function name: label_get
-;Purpose......: Gets a label from the symbol table
+;Purpose......: Returns info about a label from the symbol table
 ;Input........: X = Index where label begins
 ;Output.......: Line number, X = LSB and Y = MSB
 ;               A = label length or 0 if not found
