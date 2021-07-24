@@ -51,17 +51,19 @@ exit:
 
 ;******************************************************************************
 ;Function name: ui_msg
-;Purpose......: Prints a program warning or error message
+;Purpose......: Prints a program message
 ;Input........: Pointer to message, X = AddressL and Y = AddressH
 ;               A bits 0-3: Level, where 0000 is warning and 0001 is error
 ;               A bit    4: 1=show line number
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc ui_msg
+    ;Init & temp storage of params
     sta flags
     phx
     phy
 
+    ;Check message level
     and #%00001111
     cmp #%00000001
     beq err
@@ -78,37 +80,34 @@ err:
     jsr ui_print
 
 line:
+    ;Check if line number is to be displayed
     lda flags
     and #%00010000
     beq noline
     
-    ldx #<msg_line
+    ldx #<msg_line          ;Prints: " in line "
     ldy #>msg_line
     jsr ui_print
     
-    ldx line_srclin
+    ldx line_srclin         ;Convert line number to null terminated string
     ldy line_srclin+1
     lda line_srclin+2
     jsr util_bin_to_bcd
     jsr util_bcd_to_str
-    jsr ui_print
+    jsr ui_print            ;Print line number
 
-    ldx #<msg_line2
+noline:                     ;Prints a colon and blank space
+    ldx #<msg_line2         
     ldy #>msg_line2
     jsr ui_print
     bra msg
 
-noline:
-    ldx #<(msg_line2)
-    ldy #>(msg_line2)
-    jsr ui_print
-
-msg:
+msg:                        ;Prints the actual message
     ply
     plx
     jsr ui_print
 
-    lda #13
+    lda #13                 ;Finally print a CR
     jsr KERNAL_CHROUT
     
     rts

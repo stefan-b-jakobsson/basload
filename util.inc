@@ -153,7 +153,7 @@ strip_leading_zeros:
     bcc :-
 
 exit:
-    txa     ;Start of string from search for non 0 value above; added to the output pointer
+    txa             ;Start of string from search for non 0 value above; added to the output pointer
     clc
     adc #<output
     tax

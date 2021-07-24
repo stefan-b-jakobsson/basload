@@ -38,14 +38,20 @@
 
 ;******************************************************************************
 ;Function name: token_init
-;Purpose......: Initializes token functions
+;Purpose......: Initializes token functions. This function mainly reads 
+;               through all tokens storing a checksum, the length of the
+;               token, a pointer to address where the token name starts in
+;               the list of tokens. This information is later used to
+;               enhange token search performance.
 ;Input........: Nothing
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc token_init
+    ;Select RAM bank 1
     lda #1
     sta (RAM_SEL)
     
+    ;Prepare reading through all tokens
     lda #<tokens_std
     sta token_ptr
     lda #>tokens_std
@@ -61,30 +67,30 @@
 loop:
     lda (token_ptr),y
     beq endoflist
-    bmi endoftoken
+    bmi endoftoken          ;Bit 7=1 marks end of token
     clc
     adc cs
-    sta cs
+    sta cs                  ;Update checksum value
     iny
     bra loop
 
 endoftoken:
-    and #%01111111
+    and #%01111111          ;Clear bit 7
     clc
     adc cs
-    sta $a000,x
+    sta $a000,x             ;Store final checksum for this token
     
     iny
     tya
     sta len
-    sta $a100,x
+    sta $a100,x             ;Store token length
 
-    lda token_ptr
+    lda token_ptr           ;Store pointer to token start (LSB and MSB)
     sta $a200,x
     lda token_ptr+1
     sta $a300,x
 
-    clc
+    clc                     ;Move pointer to start of next token
     lda token_ptr
     adc len
     sta token_ptr
@@ -92,21 +98,21 @@ endoftoken:
     adc #0
     sta token_ptr+1
 
-    lda len
-    cmp token_maxlen
+    lda len                 ;Update maxlen value, if this token is the longest so far
+    cmp token_maxlen        ;We need this info to speed up token search later on
     bcc :+
     sta token_maxlen
 
-:   ldy #0
+:   ldy #0                  ;Set remaning values for next token
     inx
     stz cs
     bra loop
 
 endoflist:
-    lda extended
+    lda extended           ;Check if we have read the extended tokens
     bne :+
     
-    stx token_count_std
+    stx token_count_std    ;We hadn't; prepare reading...
     
     inc extended
     lda #<tokens_ext
@@ -118,7 +124,7 @@ endoflist:
     stz cs
     bra loop
 
-:   stx token_count_ext
+:   stx token_count_ext     ;Extended tokens have been read; we're done
     rts
 
 .segment "VARS"
@@ -130,10 +136,11 @@ endoflist:
 
 ;******************************************************************************
 ;Function name: token_get
-;Purpose......: Searches for a BASIC token ID in the file buffer
-;Input........: X = Index where to start searching
+;Purpose......: Searches for a BASIC token in the file buffer
+;Input........: X = Buffer index where to start searching
 ;Output.......: A = token ID, X = extended token ID, Y = token length
-;Errors.......: Nothing
+;               A, X, Y = 0 if no token found
+;Errors.......: None
 .proc token_get
     ;Init
     stx index
@@ -142,11 +149,12 @@ endoflist:
     lda #1
     sta (RAM_SEL)
 
-    ;Calculate checksum table
+    ;Calculate and store checksums for all possible token lenghts
+    ;Calculation is stopped (1) at a blank space (2) at end of line or (3) at the token_maxlen retrieved by the token_init function
     ldy #0
 :   lda file_buf,x
-    beq :+
-    cmp #32
+    beq :+                  ;EOF
+    cmp #32                 ;Blank space
     beq :+
     clc
     adc cs
@@ -154,10 +162,10 @@ endoflist:
     sta token_cs_tbl,y
     inx
     iny
-    cpy token_maxlen
+    cpy token_maxlen        ;At token maxlen?
     bne :-
 
-:   sty possible_len
+:   sty possible_len        ;Store the longest possible token to look for in this case
     
     ldx #0
 loop:
@@ -185,13 +193,13 @@ loop:
     ldy #0
     ldx index
 :   lda (token_ptr),y
-    and #%01111111
+    and #%01111111          ;Ensure bit 7 is cleared when comparing names
     cmp file_buf,x
     bne :+
     inx
     iny
     cpy len
-    beq ismatch
+    beq ismatch             ;We reached token len without match errors => we have a match
     bra :-
 
 :   ldx tokenid
@@ -210,15 +218,18 @@ nexttoken:
 ismatch:
     lda tokenid
 
-    cmp token_count_std
+    ;Check if we got a standard or extended token
+    cmp token_count_std 
     bcs :+
     
+    ;Standard token (same as Commodore)
     clc
     adc #$80
     ldx #0
     ldy len
     rts
 
+    ;Extended token (X16 additions)
 :   sec
     sbc token_count_std
     clc

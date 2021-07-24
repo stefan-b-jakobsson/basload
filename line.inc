@@ -72,7 +72,8 @@
 
 ;******************************************************************************
 ;Function name: line_pass1
-;Purpose......: Load pass 1; looks for label defintions
+;Purpose......: Load pass 1; looks for label defintions and stores them in
+;               the symbol table
 ;Input........: Nothing
 ;Output.......: A = 0 if OK
 ;Errors.......: A = 1 if error occured
@@ -212,7 +213,9 @@ next:
 
 ;******************************************************************************
 ;Function name: line_pass2
-;Purpose......: Load pass 2; enters BASIC code into memory
+;Purpose......: Load pass 2; tokenizes the source code and replaces label
+;               references with the corresponding line numbers stored in
+;               the symbol table during pass 1
 ;Input........: Nothing
 ;Output.......: A = 0 if OK
 ;Errors.......: A = 1 if error occured
