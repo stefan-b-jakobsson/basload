@@ -113,6 +113,7 @@ err:
 ;               read the error code and message
 .proc file_readln
     stz index
+    stz quotes
     
 loop:
     ;Read char from file
@@ -133,8 +134,35 @@ loop:
     lda #2
     rts
 
+:   ;Check quote
+    cmp #34
+    bne :+
+    inc quotes
+    bra store_char
+
+:   ;Store char in Y register temporarily
+    tay
+
+    ;Convert to ASCII upper case if not within a string
+    lda quotes
+    and #%00000001
+    bne :+                  ;Within string, store char as is
+
+    cpy #97
+    bcc :+                  ;Less than 97, store char as is
+    cpy #123
+    bcs :+                  ;Equal or greater than 123, store char as is
+
+    tya                     ;Char is lower case, clear bit 5 to convert to ASCII upper case
+    and #%11011111
+    bra store_char
+
+    ;Transfer char back to A
+:   tya
+
     ;Store char in buffer
-:   sta file_buf,x
+store_char:
+    sta file_buf,x
     inc index
 
     ;Read file status
@@ -178,6 +206,7 @@ eol:
 
 .segment "VARS"
     index: .res 1
+    quotes: .res 1
 .CODE
 .endproc
 

@@ -61,7 +61,7 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc label_init
-    ;Clear label count in each bucket
+    ;Clear label count for each bucket
     ldx #0
     lda #0
 :   sta label_count,x

@@ -61,12 +61,13 @@ exit:
     .ZEROPAGE
         fv: .res 2
     .CODE
-    
+
     ;Get Kernal version (bank 0/$ff80), we must use Kernal FETVEC function as we do not yet know how to set the ROM bank
     lda #<KERNAL_VERSION
     sta fv
     lda #>KERNAL_VERSION
     sta fv+1
+    ldx #0
     ldy #0
     lda #fv
     jsr KERNAL_FETVEC
@@ -83,7 +84,7 @@ exit:
     sta ROM_SEL+1
     rts
 
-:   lda #$01                    ;Version: other
+:   lda #$01                    ;Version: other then R38, presume R39
     sta ROM_SEL
     lda #$00
     sta RAM_SEL
@@ -105,7 +106,7 @@ exit:
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.4 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
+    ps: .byt 13,"*** basic loader 0.0.5 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
 .endproc
 
 ;******************************************************************************
