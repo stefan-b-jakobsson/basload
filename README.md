@@ -117,7 +117,7 @@ in the text editor.
 
 BASLOAD does not require you to use X16 Edit, but there are some benefits.
 
-Using BASLOAD and X16 Edit in conjunction makes the following workflow possible:
+Using BASLOAD and X16 Edit in conjunction makes the following convenient workflow possible:
 
 * Type SYS $9003 to launch the text editor which will reload the last BASIC source file
 * Edit the source file, save it to disk and quit the editor
