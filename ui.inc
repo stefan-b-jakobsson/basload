@@ -106,14 +106,11 @@ msg:                        ;Prints the actual message
     ply
     plx
     jsr ui_print
-
-    lda #13                 ;Finally print a CR
-    jsr KERNAL_CHROUT
     
     rts
     
-msg_warn:   .byt "warning",0
-msg_err:    .byt "error",0
+msg_warn:   .byt 13, "warning",0
+msg_err:    .byt 13, "error",0
 msg_line:   .byt " in line ",0
 msg_line2:  .byt ": ",0
 

@@ -208,12 +208,12 @@ noinput:
     rts
 
 msg_loadprev: .byt 13, "last file was ",0
-msg_loadprev2: .byt 13, "load (cr=y/n): ",0
+msg_loadprev2: .byt 13, "reload (cr=y/n)? ",0
 
 msg_prompt: .byt 13, "enter file name: ", 0
 
-msg_loading: .byt   13, "loading...", 13, 0
-msg_nofile: .byt 13, "no source file", 13, 0
+msg_loading: .byt   13, "loading...", 0
+msg_nofile: .byt 13, "no source file", 0
 .endproc
 
 ;******************************************************************************
