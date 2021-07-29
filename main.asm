@@ -26,6 +26,16 @@
 
 .include "common.inc"
 
+;******************************************************************************
+;Jump table
+
+    ;$9000
+    jmp main_default
+    
+    ;$9003
+    jmp main_editor
+
+.proc main_default
     ;Initialize
     jsr main_init
 
@@ -41,6 +51,10 @@
     lda file_len
     beq exit
 
+    ;Set load flag = true
+    lda #1
+    sta main_loadflag
+
     ;Start loading...
     jsr main_load
     
@@ -49,6 +63,7 @@ exit:
     pla     
     sta (ROM_SEL)
     rts
+.endproc
 
 ;******************************************************************************
 ;Function name: main_init
@@ -106,7 +121,7 @@ exit:
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.5 ***",13, "(c) 2021 stefan jakobsson",13,13,"source file name: ",0
+    ps: .byt 13,"*** basic loader 0.0.6 ***",13, "(c) 2021 stefan jakobsson",13,0
 .endproc
 
 ;******************************************************************************
@@ -116,8 +131,58 @@ exit:
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_get_sourcefile
-    ldy #0
+    ;Prompt to load last file
+    lda main_loadflag
+    beq prompt
+    lda file_len
+    beq prompt
 
+    ldx #<msg_loadprev
+    ldy #>msg_loadprev
+    jsr ui_print
+    
+    ldy file_len
+    lda #0
+    sta file_name,y
+    ldx #<file_name
+    ldy #>file_name
+    jsr ui_print
+
+    ldx #<msg_loadprev2
+    ldy #>msg_loadprev2
+    jsr ui_print
+
+    ldy #0
+:   jsr KERNAL_CHRIN
+    cmp #13
+    beq :+
+    sta file_buf,y
+    iny
+    bra :-
+
+:   cpy #0
+    beq reload
+    lda file_buf
+    and #%11011111
+    cmp #'y'
+    beq reload
+    cmp #'n'
+    beq prompt
+    bra main_get_sourcefile     ;Invalid response, try again
+
+reload:
+    ldx #<msg_loading
+    ldy #>msg_loading
+    jsr ui_print
+    rts
+
+    ;Prompt user for new file name
+prompt:
+    ldx #<msg_prompt
+    ldy #>msg_prompt
+    jsr ui_print
+
+    ldy #0
 :   jsr KERNAL_CHRIN
     cmp #13
     beq eol
@@ -131,19 +196,24 @@ eol:
     cpy #0
     beq noinput
 
-    ldx #<msg
-    ldy #>msg
+    ldx #<msg_loading
+    ldy #>msg_loading
     jsr ui_print
     rts
 
 noinput:
-    ldx #<msg2
-    ldy #>msg2
+    ldx #<msg_nofile
+    ldy #>msg_nofile
     jsr ui_print
     rts
 
-msg: .byt   13, "loading...", 13, 0
-msg2: .byt 13, "no source file", 13, 0
+msg_loadprev: .byt 13, "last file was ",0
+msg_loadprev2: .byt 13, "load (cr=y/n): ",0
+
+msg_prompt: .byt 13, "enter file name: ", 0
+
+msg_loading: .byt   13, "loading...", 13, 0
+msg_nofile: .byt 13, "no source file", 13, 0
 .endproc
 
 ;******************************************************************************
@@ -251,8 +321,65 @@ eof2:
     jsr ui_msg
 
 :   rts
+.endproc
+
+;******************************************************************************
+;Function name: main_editor
+;Purpose......: Loads and starts X16 Edit from the root folder of the SD card 
+;               if present. Load path is "//:X16EDIT*.PRG". If the program
+;               has been previously called upon to load a BASIC file, that
+;               file will automatically be opened in the editor
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
+.proc main_editor
+    ;Set file params
+    lda #2
+    ldx #8
+    ldy #1
+    jsr KERNAL_SETLFS
+
+    ;Set X16 Edit executable path
+    lda #path_end-path
+    ldx #<path
+    ldy #>path
+    jsr KERNAL_SETNAM
+
+    ;Load X16 Edit
+    lda #0
+    jsr KERNAL_LOAD
+
+    ;Check for load errors
+    bcs err
+
+    ;Check if a BASIC file has been loaded previously
+    lda main_loadflag
+    bne :+
+    jmp 2061            ;No, start the editor with an empty buffer
+
+:   lda #<file_name     ;Yes, start the editor and open the previous BASIC file
+    sta KERNAL_R0
+    lda #>file_name
+    sta KERNAL_R0+1
+    lda file_len
+    sta KERNAL_R1
+    jmp 2064
+
+err:
+    ldx #<loaderrmsg
+    ldy #>loaderrmsg
+    jsr ui_print
+    rts
+
+path:
+    .byt "//:x16edit*.prg"
+path_end:
+
+loaderrmsg: .byt 13,"x16 edit not found", 13, 0
 
 .endproc
+
+main_loadflag: .byt 0
 
 .include "file.inc"
 .include "ui.inc"

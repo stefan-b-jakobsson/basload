@@ -25,12 +25,13 @@
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .segment "VARS"
-    file_name: .res 256
     file_buf: .res 256
-    file_len: .res 1
     file_device: .res 1
     file_err: .res 1
 .CODE
+
+file_name: .res 256
+file_len: .res 1
 
 ;******************************************************************************
 ;Function name: file_init
