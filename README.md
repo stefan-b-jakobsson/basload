@@ -4,10 +4,27 @@
 
 BASLOAD is made in 65C02 assembly for the Commander X16 platform that was devised by David Murray, a.k.a. the 8-Bit Guy.
 
+The purpose of BASLOAD is to enhance the programming experience by letting you write BASIC source code in the editor of your choosing without line numbers.
+
 BASLOAD is best described as a BASIC tokenizer. It takes BASIC source code stored on disk in plain text format, and loads it into RAM. While loading
 the file, it's tokenized so that it can be run by the built-in BASIC interpreter.
 
-The purpose of BASLOAD is to enhance the programming experience by letting you edit BASIC source code in the editor of your choosing.
+Even though the BASIC source code may be written in any editor, there are special bindings for X16 Edit in order to create an effective workflow.
+
+
+## Hello World
+
+As customary, let's first make a Hello World program.
+
+```
+LOOP:
+    PRINT "HELLO, WORLD"
+    GOTO LOOP
+```
+
+As may be seen, a label is defined on the first line, and called on the last line. No line numbers are used. Apart from that,
+the BASIC code is the same as the standard X16 BASIC.
+
 
 ## Creating source files
 
@@ -20,13 +37,12 @@ The source files may be created by any means if the following requirements are m
 * The source file may not be more than 1,677,215 lines (24 bit counter)
 * The resulting BASIC code may not be more than 65,535 lines (16 bit counter, a limitation of the platform)
 
-Line numbers are not used in source files. Instead you define named labels as target for GOTO,  GOSUB and THEN commands.
+Line numbers are not used or allowed in source files. Instead you define named labels as target for GOTO,  GOSUB and THEN commands.
 
-Apart from that, the BASIC code is the same as when you program directly in the built-in BASIC editor on the X16.
 
-## Defining labels
+## Labels
 
-Labels are defined at the beginning of a line in the source file. It is, however, allowed to put blank spaces before the start of a label definition.
+Labels are defined at the beginning of a line in the source file. Labels may be preceded by blank spaces, but no other characters.
 
 The first character of a label must be within A-Z. The subsequent characters may also contain digits. No other characters are allowed in a label name.
 
@@ -49,48 +65,30 @@ The symbol table where the labels are stored is in banked RAM and may for now ho
 * A checksum, calculated by adding the PETSCII values of the label name
 * The line number in the tokenized BASIC code whereto the label points
 
-It is possible to use labels longer than twelve characters, but that may cause "false" duplicates. BASLOAD will warn you about this, and if there is an actual duplicate definition (true or false), the
-program will stop with an error.
+It is possible to use labels longer than twelve characters, but that may cause "false" duplicates. BASLOAD will warn you about this, and if there is an actual duplicate definition (true or false), the program will stop with an error.
 
-## Using labels
+Labels are used after GOTO, GOSUB and THEN statements. To use a label, just type its name (without the colon).
 
-Labels are used where line numbers normally are used, i.e. as targets for GOTO and GOSUB commands, and after THEN commands.
 
-BASLOADS expects there to be a valid label reference after GOTO and GOSUB commands, and will stop with an error if there is not. After THEN commands, there may be a label, but also other statements.
+## Load BASLOAD into memory
 
-To use a label, just type its name (without colon).
-
-A label need not be separated from the preceding command by a blank space or any other delimiter. BASLOAD, however, expects that a label continues until encountering a character that is not allowed in label names (A-Z and digits).
-
-## Source code example
-
-Here follows a simple example illustrating the BASLOAD source code format:
-
-```
-LOOP:
-    PRINT "HELLO, WORLD"
-    GOTO LOOP
-```
-
-## Loading the program into memory
-
-BASLOAD needs to be loaded into memory with an absolute address at $9000.
+BASLOAD needs to be loaded into memory with an absolute address of $9000.
 
 If stored on the SD card, load it with LOAD"BASLOAD.PRG",8,1 within the emulator.
 
 If stored in the host file system, start the emulator with x16emu -prg BASLOAD.PRG,9000 -sdcard sdcard.img
+
 
 ## Loading and tokenizing BASIC source files
 
 Type SYS $9000 to start the main function of the program, that is loading a BASIC source file
 into memory.
 
-If the program has been run previously it will first ask if you want to reload the same source file. Press ENTER or Y and ENTER
-to do this.
+If the program has been run previously it will first ask if you want to reload the same source file as before.
 
-Otherwise the program asks you to enter the source file name and press ENTER.
+Otherwise the program prompts you to enter the source file name.
 
-BASLOAD is not chatting with you as a source file is loaded. If all goes well nothing is said, and you are greeted with READY.
+BASLOAD outputs no message if the procedure is successful. If all goes well nothing is said, and you are only greeted with READY.
 
 List of errors and warnings that may occur:
 
@@ -102,16 +100,19 @@ List of errors and warnings that may occur:
 * LINE NUMBER OVERFLOW: Raised if the tokenzied BASIC code is more than 65,535 lines
 
 
-## Starting X16 Edit from the program
+## Starting X16 Edit from BASLOAD
 
-X16 Edit, the text editor I've developed especially for the Commander X16, may be started from BASLOAD.
+The text editor X16 Edit may be started from BASLOAD to make programming more convenient.
 
-To do this, type SYS $9003. BASLOAD loads X16 Edit from the SD card, and expects the executable file to
-be in the root folder. The actual CBM DOS path is "//:X16EDIT*.PRG". If there are several versions
-of X16 Edit stored in the root folder, one of them will be started.
+To do this, type SYS $9003. 
+
+BASLOAD tries to load X16 Edit from the SD card, and expects the program file to
+be in the root folder. The CBM DOS path used to load X16 Edit is "//:X16EDIT*.PRG". If there are several versions
+of X16 Edit stored in the root folder, the first one encountered will be loaded and started.
 
 If BASLOAD already has been used to load a BASIC source file, that file will automatically be opened
 in the text editor.
+
 
 ## BASLOAD + X16 Edit workflow
 
@@ -119,8 +120,15 @@ BASLOAD does not require you to use X16 Edit, but there are some benefits.
 
 Using BASLOAD and X16 Edit in conjunction makes the following convenient workflow possible:
 
-* Type SYS $9003 to launch the text editor which will reload the last BASIC source file
+* Type SYS $9003 to launch the text editor - if you already have used BASLOAD, the last BASIC source file will be opened automatically
 * Edit the source file, save it to disk and quit the editor
 * Type SYS $9000 to load and tokenize the source file
 * Type RUN to test the program
 * Repeat
+
+
+## Save BASIC programs in tokenized form
+
+If you want to save a BASIC program in tokenized form, i.e. as a normal
+BASIC program for the X16, just load the source file with BASLOAD and then
+save the program with the standard SAVE command.
