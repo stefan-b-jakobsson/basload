@@ -9,7 +9,7 @@ The purpose of BASLOAD is to enhance the programming experience by letting you w
 BASLOAD is best described as a BASIC tokenizer. It takes BASIC source code stored on disk in plain text format, and loads it into RAM. While loading
 the file, it's tokenized so that it can be run by the built-in BASIC interpreter.
 
-Even though the BASIC source code may be written in any editor, there are special bindings for X16 Edit in order to create an effective workflow.
+Even though the BASIC source code may be written in any editor, there are special bindings for the text editor X16 Edit in order to create an effective workflow.
 
 
 ## Hello World
