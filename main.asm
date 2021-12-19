@@ -363,6 +363,8 @@ eof2:
     sta KERNAL_R0+1
     lda file_len
     sta KERNAL_R1
+    ldx #1
+    ldy #255
     jmp 2064
 
 err:
@@ -388,3 +390,4 @@ main_loadflag: .byt 0
 .include "label.inc"
 .include "util.inc"
 .include "msg.inc"
+.include "curtest.inc"
