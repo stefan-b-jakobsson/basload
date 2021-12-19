@@ -390,4 +390,3 @@ main_loadflag: .byt 0
 .include "label.inc"
 .include "util.inc"
 .include "msg.inc"
-.include "curtest.inc"
