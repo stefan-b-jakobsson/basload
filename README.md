@@ -78,7 +78,7 @@ If stored on the SD card, load it with LOAD"BASLOAD-x.x.x.PRG",8 within the emul
 
 If stored in the host file system, start the emulator with x16emu -prg BASLOAD-x.x.x.PRG -sdcard sdcard.img
 
-Type RUN to setup BASLOAD. This will copy the program to it's final destination in RAM ($9000), and also
+Type RUN to setup BASLOAD. This will copy the program to its final destination in RAM ($9000), and also
 setup the wedge commands that start with a ! character. A short description on how to use BASLOAD is displayed.
 
 
