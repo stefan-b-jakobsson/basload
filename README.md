@@ -72,16 +72,19 @@ Labels are used after GOTO, GOSUB and THEN statements. To use a label, just type
 
 ## Load BASLOAD into memory
 
-BASLOAD needs to be loaded into memory with an absolute address of $9000.
+BASLOAD is loaded from the SD card as a normal BASIC program.
 
-If stored on the SD card, load it with LOAD"BASLOAD.PRG",8,1 within the emulator.
+If stored on the SD card, load it with LOAD"BASLOAD-x.x.x.PRG",8 within the emulator.
 
-If stored in the host file system, start the emulator with x16emu -prg BASLOAD.PRG,9000 -sdcard sdcard.img
+If stored in the host file system, start the emulator with x16emu -prg BASLOAD-x.x.x.PRG -sdcard sdcard.img
+
+Type RUN to setup BASLOAD. This will copy the program to it's final destination in RAM ($9000), and also
+setup the wedge commands that start with a ! character. A short description on how to use BASLOAD is displayed.
 
 
 ## Loading and tokenizing BASIC source files
 
-Type SYS $9000 to start the main function of the program, that is loading a BASIC source file
+Type the wedge command !L or SYS $9000 to start the main function of the program, that is loading a BASIC source file
 into memory.
 
 If the program has been run previously it will first ask if you want to reload the same source file as before.
@@ -104,9 +107,11 @@ List of errors and warnings that may occur:
 
 The text editor X16 Edit may be started from BASLOAD to make programming more convenient.
 
-To do this, type SYS $9003. 
+To do this, type the wedge command !E or SYS $9003. 
 
-BASLOAD tries to load X16 Edit from the SD card, and expects the program file to
+The program first searches for X16 Edit in the ROM banks.
+
+If not found in ROM, the program will try to load X16 Edit from the SD card, and expects the program file to
 be in the root folder. The CBM DOS path used to load X16 Edit is "//:X16EDIT*.PRG". If there are several versions
 of X16 Edit stored in the root folder, the first one encountered will be loaded and started.
 
@@ -120,9 +125,9 @@ BASLOAD does not require you to use X16 Edit, but there are some benefits.
 
 Using BASLOAD and X16 Edit in conjunction makes the following convenient workflow possible:
 
-* Type SYS $9003 to launch the text editor - if you already have used BASLOAD, the last BASIC source file will be opened automatically
+* Type !E or SYS $9003 to launch the text editor - if you already have used BASLOAD, the last BASIC source file will be opened automatically
 * Edit the source file, save it to disk and quit the editor
-* Type SYS $9000 to load and tokenize the source file
+* Type !L or SYS $9000 to load and tokenize the source file
 * Type RUN to test the program
 * Repeat
 
