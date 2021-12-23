@@ -40,10 +40,19 @@ KERNAL_VARTAB = $03E2
 KERNAL_LINNUM = $d4
 KERNAL_FETVEC = $ff74
 
+BASIC_CHRGET = $00e7
+BASIC_IGONE = $0308
+
 KERNAL_R0 = $02
 KERNAL_R1 = $04
 
 .ZEROPAGE
     RAM_SEL: .res 2
     ROM_SEL: .res 2
+    TEMP1: .res 2
+    TEMP2: .res 2
+
+.segment "VARS"
+    BASIC_NGONE: .res 2
+    BASIC_NGONE1: .res 2
 .CODE

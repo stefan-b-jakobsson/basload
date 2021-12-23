@@ -27,14 +27,132 @@
 .include "common.inc"
 
 ;******************************************************************************
-;Jump table
+.segment "LCODE"
 
+;******************************************************************************
+;Function name: main_setup
+;Purpose......: Loads program into its final destination in RAM; also wedge
+;               command setup
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
+.proc main_setup
+    ;Copy program to address $9000-
+    lda #<main_lcode_end
+    sta TEMP1
+    lda #>main_lcode_end
+    sta TEMP1+1
+
+    stz TEMP2
+    lda #$90
+    sta TEMP2+1
+
+    lda #1
+    sta $00
+
+    ldy #0
+    ldx #$0f
+loop:
+    lda (TEMP1),y
+    sta (TEMP2),y
+    iny
+    bne loop
+    inc TEMP1+1
+    inc TEMP2+1
+    dex
+    bne loop
+
+    ;Setup of wedge command
+wedge_setup:
+    ;Fetch and store default IGONE address
+    clc
+    lda BASIC_IGONE
+
+    sta BASIC_NGONE
+    adc #3
+    sta BASIC_NGONE1
+    
+    lda BASIC_IGONE+1
+    sta BASIC_NGONE+1
+    adc #0
+    sta BASIC_NGONE1+1
+
+    ;Set address to custom wedge parser in IGONE
+    lda #<main_wedge_parser
+    sta BASIC_IGONE
+    lda #>main_wedge_parser
+    sta BASIC_IGONE+1
+
+    ;Print program info
+print:
+    ldx #0
+:   lda msg,x
+    beq exit
+    jsr $ffd2
+    inx
+    bra :-
+
+exit:
+    rts
+
+msg:
+    .byt 13,"*** basload 0.1.0 ***",13
+    .byt "program copied to memory address $9000-$9eff",13
+    .byt "commands:",13
+    .byt " !l or sys $9000: starts basic loader",13
+    .byt " !e or sys $9003: starts x16 edit, if present in rom or sd card root folder",13,0
+.endproc
+
+;Marks end of setup code, and beginning of code of actual program code
+main_lcode_end:
+.segment "CODE"
+
+;******************************************************************************
+;Jump table
     ;$9000
     jmp main_default
     
     ;$9003
     jmp main_editor
 
+;******************************************************************************
+;Function name: main_wedge_parser
+;Purpose......: Wedge command parser. Supported commands are:
+;               !l  => start basic loader (entry point $9000)
+;               !e  => start X16 Edit (entry point $9003)
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
+.proc main_wedge_parser
+    ;Check if start of wedge command
+    jsr BASIC_CHRGET
+    cmp #'!'
+    beq :+
+    jmp (BASIC_NGONE1)  ;No, exit
+
+:   jsr BASIC_CHRGET
+    cmp #'l'            ;!l => basic loader
+    beq load
+    cmp #'e'            ;!e => X16 Edit
+    beq editor
+    jmp (BASIC_NGONE1)  ;Unkwon command, will result in ?SYNTAX ERROR
+
+load:
+    jsr main_default
+    jmp (BASIC_NGONE)
+
+editor:
+    jsr main_editor
+    jmp (BASIC_NGONE)
+
+.endproc
+
+;******************************************************************************
+;Function name: main_default
+;Purpose......: Default entry point, starts basic loader
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
 .proc main_default
     ;Initialize
     jsr main_init
@@ -106,7 +224,6 @@ exit:
     sta ROM_SEL+1
     sta RAM_SEL+1
     rts
-
 .endproc
 
 ;******************************************************************************
@@ -121,7 +238,7 @@ exit:
     jsr ui_print
     rts
 
-    ps: .byt 13,"*** basic loader 0.0.6 ***",13, "(c) 2021 stefan jakobsson",13,0
+    ps: .byt 13,"*** basic loader 0.1.0 ***",13, "(c) 2021 stefan jakobsson",13,0
 .endproc
 
 ;******************************************************************************
@@ -333,7 +450,65 @@ eof2:
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_editor
+     ;Initialize program
+    jsr main_init
+
+    ;Store current ROM bank on stack
+    lda (ROM_SEL)
+    pha
+
+    ;Check if editor is present in ROM, and start if found
+    lda #7
+    sta (ROM_SEL)
+    tax
+    ldy #0
+
+romloop:
+    lda $fff0,y
+    cmp editorsignature,y
+    bne nomatch
+    iny
+    cpy #7
+    bne romloop
+
+    ;Found X16 Edit in ROM
+    lda main_loadflag
+    bne :+
+    
+    ldx #1
+    ldy #255
+    jsr $c000            ;No, start the editor with an empty buffer
+    bra exitrom
+
+:   lda #<file_name     ;Yes, start the editor and open the previous BASIC file
+    sta KERNAL_R0
+    lda #>file_name
+    sta KERNAL_R0+1
+    lda file_len
+    sta KERNAL_R1
+    ldx #1
+    ldy #255
+    jsr $c003
+    
+exitrom:
+    pla                 ;Restore ROM bank to original value
+    sta (ROM_SEL)
+    rts
+
+nomatch:
+    ldy #0
+    inx
+    txa 
+    sta (ROM_SEL)
+    cpx #0
+    bne romloop
+
+    ;Editor not found in ROM, try to load from SD card root folder
     ;Set file params
+loadfromfile:
+    pla                 ;Restore ROM bank to original value
+    sta (ROM_SEL)
+    
     lda #2
     ldx #8
     ldy #1
@@ -378,7 +553,7 @@ path:
 path_end:
 
 loaderrmsg: .byt 13,"x16 edit not found", 13, 0
-
+editorsignature: .byt $58,$31,$36,$45,$44,$49,$54
 .endproc
 
 main_loadflag: .byt 0
