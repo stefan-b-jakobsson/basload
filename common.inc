@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,6 @@ KERNAL_R0 = $02
 KERNAL_R1 = $04
 
 .ZEROPAGE
-    RAM_SEL: .res 2
-    ROM_SEL: .res 2
     TEMP1: .res 2
     TEMP2: .res 2
 

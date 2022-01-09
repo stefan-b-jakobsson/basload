@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -90,13 +90,14 @@
     inc line_srclin+1
     bne :+
     inc line_srclin+2
+    beq :++
 
 :   inc line_dstlin
     bne loop
     inc line_dstlin+1
     bne loop
 
-    ldx #<msg_line_num_overflow         ;Line number overflow, i.e. greater than 65,535
+:   ldx #<msg_line_num_overflow         ;Line number overflow, i.e. greater than 65,535
     ldy #>msg_line_num_overflow
     lda #%00010001
     jsr ui_msg
@@ -125,7 +126,10 @@ eol:
 checks:
     ;Check if blank space
     cmp #32
-    bne :+ 
+    bne :+
+    jmp next
+:   cmp #9  ;Tab
+    bne :+
     jmp next
 :   inc count_chars
     inc count_chars_after_label
@@ -263,11 +267,13 @@ chk_rem:                    ;After a REM statement, just copy the rest of the li
     bne chk_blnk
     jmp copy
 
-chk_blnk:                   ;Check if last char was a blank space; if yes ignore if outside string, copy to destination if within string
+chk_blnk:                   ;Check if last char was a blank space or tab; if yes ignore if outside string, copy to destination if within string
     cmp #32
-    bne :++
+    beq :+
+    cmp #9
+    bne :+++
     
-    lda count_quotes
+:   lda count_quotes
     and #1
     bne :+
     jmp next

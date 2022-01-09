@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -197,7 +197,7 @@ LABEL_BUCKET_COUNT = 8      ;Must be even number >= 2
     lsr
     ina
     ina
-    sta (RAM_SEL)
+    sta RAM_SEL
 
     ;Set pointer to start of bucket
     stz label_ptr       ;LSB

@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,6 @@
     token_ptr: .res 2
 .CODE
 
-.segment "VARS"
-    token_last: .res 1
-    token_count_std: .res 1
-    token_count_ext: .res 1
-    token_maxlen: .res 1
-    token_cs_tbl: .res 7
-.CODE
-
 ;******************************************************************************
 ;Function name: token_init
 ;Purpose......: Initializes token functions. This function mainly reads 
@@ -47,48 +39,65 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc token_init
-    ;Select RAM bank 1
+    ;Store current ROM bank on stack, and select BASIC ROM bank (=4)
+    lda #4
+    sta ROM_SEL
+
     lda #1
-    sta (RAM_SEL)
-    
-    ;Prepare reading through all tokens
-    lda #<tokens_std
+    sta RAM_SEL
+
+    ;Get start of token lists in BASIC ROM
+    ldx #<token_stdtbl_head
+    ldy #>token_stdtbl_head
+    jsr token_find_table
+    stx token_stdtbl_start
+    sty token_stdtbl_start+1
+
+    ldx #<token_exttbl_head
+    ldy #>token_exttbl_head
+    jsr token_find_table
+    stx token_exttbl_start
+    sty token_exttbl_start+1
+
+    ;Prepare reading through all standard tokens
+    lda token_stdtbl_start
     sta token_ptr
-    lda #>tokens_std
+    lda token_stdtbl_start+1
     sta token_ptr+1
 
-    stz token_maxlen
-    stz extended
+    ;Prepare to gather token metadata
+    stz token_maxlen        ;The length of the longest token
+    stz extended_flag       ;A flag indicating whether extended tokens have been analyzed yey
     
     ldy #0
     ldx #0
     stz cs
-
 loop:
-    lda (token_ptr),y
-    beq endoflist
-    bmi endoftoken          ;Bit 7=1 marks end of token
-    clc
+    lda (token_ptr),y       ;Get current token char
+    beq endoflist           ;The list of tokens is null terminated, check if we have reached the end
+    bmi endoftoken          ;Bit 7=1 marks last char of a token
+    
+    clc                     ;It was not the last char
     adc cs
     sta cs                  ;Update checksum value
     iny
-    bra loop
+    bra loop                ;Continue
 
 endoftoken:
-    and #%01111111          ;Clear bit 7
+    and #%01111111          ;Clear bit 7 which is used as end of token marker
     clc
     adc cs
-    sta $a000,x             ;Store final checksum for this token
+    sta token_cs_tbl,x      ;Store final checksum for this token
     
     iny
     tya
     sta len
-    sta $a100,x             ;Store token length
+    sta token_len_tbl,x     ;Store token length
 
-    lda token_ptr           ;Store pointer to token start (LSB and MSB)
-    sta $a200,x
+    lda token_ptr           ;Store pointer to token start in BASIC ROM (LSB and MSB)
+    sta token_addressL_tbl,x
     lda token_ptr+1
-    sta $a300,x
+    sta token_addressH_tbl,x
 
     clc                     ;Move pointer to start of next token
     lda token_ptr
@@ -103,34 +112,35 @@ endoftoken:
     bcc :+
     sta token_maxlen
 
-:   ldy #0                  ;Set remaning values for next token
-    inx
-    stz cs
+:   ldy #0                  ;Prepare for next token
+    inx                     ;Advance token id
+    stz cs                  ;Reset checksum counter
     bra loop
 
 endoflist:
-    lda extended           ;Check if we have read the extended tokens
+    lda extended_flag       ;Check if we have read the extended tokens
     bne :+
     
-    stx token_count_std    ;We hadn't; prepare reading...
-    
-    inc extended
-    lda #<tokens_ext
+    stx token_count_std     ;We hadn't, store number of standard tokens
+    inc extended_flag       ;Set flag that we now start to read extended tokens
+
+    lda token_exttbl_start  ;Set pointer to start of token table in BASIC ROM
     sta token_ptr
-    lda #>tokens_ext
+    lda token_exttbl_start+1
     sta token_ptr+1
     
-    ldy #0
-    stz cs
+    ldy #0                  ;Prepare for next token
+    stz cs                  ;Reset checksum counter
     bra loop
 
-:   stx token_count_ext     ;Extended tokens have been read; we're done
+:   stx token_count_ext     ;Store index of last extended token + 1
+
     rts
 
 .segment "VARS"
     cs: .res 1
     len: .res 1
-    extended: .res 1
+    extended_flag: .res 1   ;Flag to indicate if extended tokens have been analyzed
 .CODE
 .endproc
 
@@ -146,8 +156,13 @@ endoflist:
     stx index
     stz cs
 
+    ;Store current ROM bank on the stack, and set BASIC ROM bank (=4)
+    lda #4
+    sta ROM_SEL
+
+    ;Select RAM bank 1 where token metadata is stored
     lda #1
-    sta (RAM_SEL)
+    sta RAM_SEL
 
     ;Calculate and store checksums for all possible token lenghts
     ;Calculation is stopped (1) at a blank space (2) at end of line or (3) at the token_maxlen retrieved by the token_init function
@@ -156,10 +171,10 @@ endoflist:
     beq :+                  ;EOF
     cmp #32                 ;Blank space
     beq :+
-    clc
+    clc                     ;Update checksum
     adc cs
     sta cs
-    sta token_cs_tbl,y
+    sta cs_tbl,y
     inx
     iny
     cpy token_maxlen        ;At token maxlen?
@@ -167,25 +182,25 @@ endoflist:
 
 :   sty possible_len        ;Store the longest possible token to look for in this case
     
-    ldx #0
+    ldx #0                  ;X is token index
 loop:
-    ;Test len
-    lda $a100,x
+    ;Verify token len
+    lda token_len_tbl,x
     sta len
     cmp possible_len
     beq :+
-    bcs nexttoken
+    bcs nexttoken           ;Token too long, check next token
 
-    ;Test checksum
+    ;Verify token checksum
 :   tay
-    lda $a000,x
-    cmp token_cs_tbl-1,y
-    bne nexttoken
+    lda token_cs_tbl,x
+    cmp cs_tbl-1,y
+    bne nexttoken           ;Token checksum is different, check next token
 
     ;Compare name
-    lda $a200,x
+    lda token_addressL_tbl,x
     sta token_ptr
-    lda $a300,x
+    lda token_addressH_tbl,x
     sta token_ptr+1
 
     stx tokenid
@@ -205,11 +220,12 @@ loop:
 :   ldx tokenid
 
 nexttoken:
-    inx
-    cpx token_count_ext
+    inx                     ;Increase token id
+    cpx token_count_ext     ;If we reach this token id, we're done searching...
     bcc loop
 
-    ldx #0
+nomatch:
+    ldx #0                  ;... there was not match
     ldy #0
     lda #0
 
@@ -219,7 +235,7 @@ ismatch:
     lda tokenid
 
     ;Check if we got a standard or extended token
-    cmp token_count_std 
+    cmp token_count_std
     bcs :+
     
     ;Standard token (same as Commodore)
@@ -229,13 +245,13 @@ ismatch:
     ldy len
     rts
 
-    ;Extended token (X16 additions)
+    ;Extended token (X16 additions), implemented by two bytes, a prefix $ce, and then a token id
 :   sec
     sbc token_count_std
     clc
-    adc #$80
-    tax
-    lda #$ce
+    adc #$80        ;Store extended token id in X
+    tax             
+    lda #$ce        ;Store prefix in A
     ldy len
     rts
 
@@ -243,127 +259,84 @@ ismatch:
     index: .res 1
     len: .res 1
     cs: .res 1
+    cs_tbl: .res 7
     possible_len: .res 1
     tokenid: .res 1
+    token_stdtbl_head_start: .res 2
+    token_exttbl_head_start: .res 2
 .CODE
 .endproc
 
-tokens_std:
-    ;CBM Basic V2 tokens: $80-8f
-    .byt "en",$c4
-    .byt "fo",$d2
-    .byt "nex",$d4
-    .byt "dat",$c1
-    .byt "input",$a3
-    .byt "inpu",$d4
-    .byt "di",$cd
-    .byt "rea",$c4
-    .byt "le",$d4
-    .byt "got",$cf
-    .byt "ru",$ce
-    .byt "i",$c6
-    .byt "restor",$c5
-    .byt "gosu",$c2
-    .byt "retur",$ce
-    .byt "re",$cd
+;******************************************************************************
+;Function name: token_find_table
+;Purpose......: Searches BASIC ROM for the start of standard and extended
+;               token tables
+;Input........: Pointer to string of 6 chars to search for (the start of
+;               the list of tokens in BASIC ROM)
+;Output.......: Pointer to start of table: X=AddressL, Y=AddressH
+;Errors.......: X and Y = 0 if not found
+.proc token_find_table
+    ;Store input pointer address
+    stx TEMP2
+    sty TEMP2+1
+    
+    ;Setup pointer to start of ROM (=$c000)
+    stz TEMP1
+    lda #$c0
+    sta TEMP1+1
 
-    ;CBM Basic V2 tokens: $90-9f
-    .byt "sto",$d0
-    .byt "o",$ce
-    .byt "wai",$d4
-    .byt "loa",$c4
-    .byt "sav",$c5
-    .byt "verif",$d9
-    .byt "de",$c6
-    .byt "pok",$c5
-    .byt "print",$a3
-    .byt "prin",$d4
-    .byt "con",$d4
-    .byt "lis",$d4
-    .byt "cl",$d2
-    .byt "cm",$c4
-    .byt "sy",$d3
-    .byt "ope",$ce
+    ;Search
+    ldy #0
+loop:
+    lda (TEMP2),y
+    cmp (TEMP1)
+    bne no_match
+    iny
+    cpy #6
+    bcs found
 
-    ;CBM Basic V2 tokens: $a0-af
-    .byt "clos",$c5
-    .byt "ge",$d4
-    .byt "ne",$d7
-    .byt "tab",$a8
-    .byt "t",$cf
-    .byt "f",$ce
-    .byt "spc",$a8
-    .byt "the",$ce
-    .byt "no",$d4
-    .byt "ste",$d0
-    .byt $ab
-    .byt $ad
-    .byt $aa
-    .byt $af
-    .byt $de
-    .byt "an",$c4
+next:   
+    inc TEMP1
+    bne loop
+    inc TEMP1+1
+    bne loop
 
-    ;CBM Basic V2 tokens: $b0-bf
-    .byt "o",$d2
-    .byt 190
-    .byt $bd
-    .byt 188
-    .byt "sg",$ce
-    .byt "in",$d4
-    .byt "ab",$d3
-    .byt "us",$d2
-    .byt "fr",$c5
-    .byt "po",$d3
-    .byt "sq",$d2
-    .byt "rn",$c4
-    .byt "lo",$c7
-    .byt "ex",$d0
-    .byt "co",$d3
-    .byt "si",$ce
+not_found:
+    ldx #0
+    ldy #0
+    rts
 
-    ;CBM Basic V2 tokens: $c0-cb
-    .byt "ta",$ce
-    .byt "at",$ce
-    .byt "pee",$cb
-    .byt "le",$ce
-    .byt "str",$a4
-    .byt "va",$cc
-    .byt "as",$c3
-    .byt "chr",$a4
-    .byt "left",$a4
-    .byt "right",$a4
-    .byt "mid",$a4
-    .byt "g",$cf
+no_match:
+    ldy #0
+    bra next
 
-    .byt 0                  ;End of list
+found:
+    sec
+    lda TEMP1
+    sbc #5
+    tax
+    lda TEMP1+1
+    sbc #0
+    tay
 
-tokens_ext:
-    ;Extended tokens: $ce + 80-8f
-    .byt "mo", 'n' + $80
-    .byt "do", 's' + $80
-    .byt "ol", 'd' + $80
-    .byt "geo", 's' + $80
-    .byt "vpok", 'e' + $80
-    .byt "vloa", 'd' + $80
-    .byt "scree", 'n' + $80
-    .byt "pse", 't' + $80
-    .byt "lin", 'e' + $80
-    .byt "fram", 'e' + $80
-    .byt "rec", 't' + $80
-    .byt "cha", 'r' + $80
-    .byt "mous", 'e' + $80
-    .byt "colo", 'r' + $80
-    .byt "tes", 't' + $80
-    .byt "rese", 't' + $80
+    rts
+.endproc
 
-    ;Extended tokens: $ce + 90-97
-    .byt "cl", 's' + $80
-    .byt "vpee", 'k' + $80
-    .byt "m", 'x' + $80
-    .byt "m", 'y' + $80
-    .byt "m", 'b' + $80
-    .byt "jo", 'y' + $80
-    .byt "hex", $a4
-    .byt "bin", $a4
+.segment "VARS"
+    token_count_std: .res 1         ;Holds index of last standard token + 1
+    token_count_ext: .res 1         ;Holds index of last extended token + 1
+    token_maxlen: .res 1            ;Holds the length of the longest token
+    token_stdtbl_start: .res 2      ;Pointer to start of first standard token in BASIC ROM
+    token_exttbl_start: .res 2      ;Pointer to start of first extended token in BASIC ROM
+.CODE
 
-    .byt 0              ;End of list
+token_cs_tbl        = $a000         ;Table of token checksums (255 bytes)
+token_len_tbl       = $a100         ;Table of token lenghts (255 bytes)
+token_addressL_tbl  = $a200         ;Table of pointers to start of individual tokens in BASIC ROM (AddressL)
+token_addressH_tbl  = $a300         ;Table of pointers to start of individual tokens in BASIC ROM (AddressH)
+
+token_stdtbl_head:
+    .byt "en",$c4,"fo",$d2
+
+token_exttbl_head:
+    .byt "mo", 'n' + $80, "do", 's' + $80

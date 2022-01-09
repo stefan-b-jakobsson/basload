@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,12 @@
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .segment "VARS"
-    file_buf: .res 256
-    file_device: .res 1
-    file_err: .res 1
+    file_name: .res 256         ;File name
+    file_len: .res 1            ;Length of file name
+    file_device: .res 1         ;Device number
+    file_err: .res 1            ;I/O error code
+    file_buf: .res 256          ;Input buffer
 .CODE
-
-file_name: .res 256
-file_len: .res 1
 
 ;******************************************************************************
 ;Function name: file_init
@@ -291,6 +290,43 @@ err:
     index: .res 1
     code: .res 1
 .CODE
+.endproc
+
+;******************************************************************************
+;Function name: file_print_disk_status
+;Purpose......: Displays disk status message
+;Input........: Nothing
+;Output.......: Nothing
+;Errors.......: Nothing
+.proc file_print_disk_status
+    ;Check if there was a Kernal I/O error, i.e. before disk communication begun
+    lda file_err
+    beq :+
+
+    ;Print I/O error message
+    tax
+    dex
+    lda file_ioerr_H,x
+    tay
+    lda file_ioerr_L,x
+    tax
+    lda #%00000001
+    jsr ui_msg
+
+    stz file_err
+    rts
+
+    ;Else get and print status retrieved from the disk if there was an error
+:   jsr file_status         ;Gets and stores disk status in file_buf
+    cmp #0                  ;A = Status code
+    beq :+                  ;0 => No error, exit without printing anything
+
+    ldx #<(file_buf)        ;Print disk status
+    ldy #>(file_buf)
+    lda #%00000001
+    jsr ui_msg
+
+:   rts
 .endproc
 
 ;******************************************************************************

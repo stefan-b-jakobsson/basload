@@ -1,6 +1,6 @@
 ;BSD 2-Clause License
 ;
-;Copyright (c) 2021, Stefan Jakobsson
+;Copyright (c) 2021-2022, Stefan Jakobsson
 ;All rights reserved.
 
 ;Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 msg_line_too_long: .byt "line too long", 0
-msg_duplicate_labels: .byt "duplicate label definition", 0
+msg_duplicate_labels: .byt "duplicate labels", 0
 msg_label_too_long: .byt "long label, may cause false duplicates", 0
 msg_mem_full: .byt "symbol table full", 0
 msg_label_expected: .byt "undefined or missing label after goto or gosub", 0
