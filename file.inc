@@ -25,12 +25,13 @@
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 .segment "VARS"
-    file_name: .res 256         ;File name
-    file_len: .res 1            ;Length of file name
     file_device: .res 1         ;Device number
     file_err: .res 1            ;I/O error code
     file_buf: .res 256          ;Input buffer
 .CODE
+
+file_name: .res 256         ;File name
+file_len: .res 1            ;Length of file name
 
 ;******************************************************************************
 ;Function name: file_init

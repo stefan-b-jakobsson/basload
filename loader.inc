@@ -32,14 +32,10 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc loader_prompt
-    ;Initialize
-    jsr main_init
-
     ;Select Kernal ROM bank
     lda ROM_SEL
     pha
-    lda #0
-    sta ROM_SEL
+    stz ROM_SEL
 
     ;Display program greeting
     ldx #<msg
@@ -171,17 +167,10 @@ msg_nofile: .byt 13, "no source file", 0
     jsr line_init
     jsr label_init
 
-    ;Open source file if loadfromram=false
-    lda loader_loadfromram
-    bne :+
     jsr file_init
     jsr file_open
     cmp #0
     bne err1
-    bra :++
-
-    ;Prepare to load from ram
-:   jsr textbuf_init
 
     ;Read and process each line
 :   jsr loader_readln
@@ -195,12 +184,8 @@ msg_nofile: .byt 13, "no source file", 0
     beq :-
 
 err1:
-    lda loader_loadfromram
-    bne :+
-    
     jsr file_close
     jmp file_print_disk_status
-:   rts
 
 eof1:
     jsr line_pass1
@@ -211,11 +196,7 @@ eof1:
     jsr line_init
 
     ;Open source file
-    lda loader_loadfromram
-    bne :+
     jsr file_open
-    bra pass2_loop
-:   jsr textbuf_init
 
     ;Read and process each line again
 pass2_loop:
@@ -229,11 +210,8 @@ pass2_loop:
     bra pass2_loop
 
 err2:
-    lda loader_loadfromram
-    bne :+
     jsr file_close
     jmp file_print_disk_status
-:   rts
 
 eof2:
     jsr line_pass2
@@ -254,13 +232,10 @@ eof2:
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc loader_readln
-    lda loader_loadfromram
-    bne :+
+    ;For now there is only one possible input source
     jmp file_readln
-:   jmp textbuf_readln
 .endproc
 
 .segment "VARS"
     loader_loadflag: .byt 0
-    loader_loadfromram: .res 1
 .CODE

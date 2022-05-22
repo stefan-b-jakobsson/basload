@@ -28,21 +28,8 @@
 .include "appversion.inc"
 
 ;******************************************************************************
-;Setup RAM and ROM select for the Kernal revision specified in the build script
-.ifndef kernal_rev
-    .error "kernal_rev not set"
-.elseif kernal_rev=38
-    RAM_SEL     = $9f61
-    ROM_SEL     = $9f60
-.elseif kernal_rev=39
-    RAM_SEL     = $00
-    ROM_SEL     = $01
-.else
-    .error "kernal_rev not supported"
-.endif
-
-;******************************************************************************
 .segment "LCODE"
+;Loaded at start of BASIC memory
 
 ;******************************************************************************
 ;Function name: main_setup
@@ -115,10 +102,11 @@ msg:
     .byt " !e or sys$9003 - start x16 edit",13,0
 .endproc
 
+main_lcode_end:
+
 ;******************************************************************************
 ;START OF CODE MOVED TO $9000 ON PROGRAM INIT
 ;******************************************************************************
-main_lcode_end:
 .segment "CODE"
 
 ;******************************************************************************
@@ -161,20 +149,7 @@ editor:
 
 .endproc
 
-;******************************************************************************
-;Function name: main_init
-;Purpose......: Initializes main functions
-;Input........: Nothing
-;Output.......: Nothing
-;Errors.......: Nothing
-.proc main_init
-    ;Set load from ram = false, i.e. load from file system
-    stz loader_loadfromram
-    rts
-.endproc
-
 .include "file.inc"
-.include "textbuf.inc"
 .include "ui.inc"
 .include "line.inc"
 .include "token.inc"

@@ -36,17 +36,12 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc editor_launch
-     ;Initialize program
-    jsr main_init
-
     ;Store current ROM bank on stack
     lda ROM_SEL
     pha
 
-    ;Scan ROM banks 7 to ff for X16 Edit; if present, there is an application signature at fff0
-    lda #7
-    sta ROM_SEL
-    tax
+    ;Scan all ROM banks for X16 Edit; if present, there is an application signature at fff0
+    stz ROM_SEL
     ldy #0
 
 scanrom_loop:
@@ -63,35 +58,36 @@ scanrom_loop:
     
     pla                 ;Restore ROM bank to original value after returning from the editor
     sta ROM_SEL
-    jmp editor_load
+    rts
 
 next_bank:
     ldy #0
-    inx
-    txa
-    sta ROM_SEL
-    cpx #0
+    inc ROM_SEL
+    lda ROM_SEL
+    cmp #0
     bne scanrom_loop    ;Fallthrough to loadfromfile if ROM bank wrapped around to 0
 
 
     ;Editor not found in ROM, try to load from SD card root folder
     ;Set file params
 loadfromfile:
-    pla                 ;Restore ROM bank to original value
+    ;Restore ROM bank to original value
+    pla
     sta ROM_SEL
     
+    ;Set logical file params
     lda #2
     ldx #8
     ldy #1
     jsr KERNAL_SETLFS
 
-    ;Set X16 Edit executable path
+    ;Set executable path
     lda #path_end-path
     ldx #<path
     ldy #>path
     jsr KERNAL_SETNAM
 
-    ;Load X16 Edit
+    ;Load program from storage media
     lda #0
     jsr KERNAL_LOAD
 
@@ -100,10 +96,7 @@ loadfromfile:
 
     ;Start editor
     jsr set_editor_params
-    jsr 2064
-
-    ;Executed after the editor is closed
-    jmp editor_load
+    jmp 2064
 
 err:
     ldx #<loaderrmsg
@@ -138,54 +131,4 @@ path:
 path_end:
 loaderrmsg: .byt 13,"x16 edit not found", 13, 0
 editorsignature: .byt $58,$31,$36,$45,$44,$49,$54
-.endproc
-
-;******************************************************************************
-;Function name: editor_load
-;Purpose......: This function is to be called after the text editor has been
-;               closed. It prompts the user whether or not to load the
-;               basic source code stored in the editor text buffer as a 
-;               BASIC program
-;Input........: Nothing
-;Output.......: Nothing
-;Errors.......: Nothing
-.proc editor_load
-    ;Print prompt message
-    ldx #<msg
-    ldy #>msg
-    jsr ui_print
-
-    ;Get response in file_buf
-    ldy #0
-:   jsr KERNAL_CHRIN
-    cmp #13
-    beq :+
-    sta file_buf,y
-    iny
-    bra :-
-
-    ;Check response
-:   cpy #0              ;Empty answer=Yes
-    beq load
-    lda file_buf
-    and #%11011111      ;Ensure upper/lower case are the same
-    cmp #'y'            ;Y=Yes
-    beq load
-    cmp #'n'            ;N=No
-    beq exit
-
-    lda #13             ;Else ask again
-    jsr KERNAL_CHROUT
-    bra editor_load
-
-exit:
-    rts
-
-load:
-    jsr main_init
-    lda #1
-    sta loader_loadfromram
-    jmp loader_run
-
-    msg: .byt "load basic program from text buffer (cr=y/n)? ",0
 .endproc
