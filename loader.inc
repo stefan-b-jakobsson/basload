@@ -60,7 +60,7 @@ exit:
     sta ROM_SEL
     rts
 
-    msg: .byt 13, .sprintf("*** basic loader %u.%u.%u ***", appversion_major, appversion_minor, appversion_patch),13, 0
+    msg: .byt 13, .sprintf("*** basload %u.%u.%u ***", appversion_major, appversion_minor, appversion_patch),13, 0
 .endproc
 
 ;******************************************************************************
