@@ -68,7 +68,7 @@
     ;Prepare to gather token metadata
     stz token_maxlen        ;The length of the longest token
     stz extended_flag       ;A flag indicating whether extended tokens have been analyzed yey
-    
+
     ldy #0
     ldx #0
     stz cs
@@ -99,7 +99,17 @@ endoftoken:
     lda token_ptr+1
     sta token_addressH_tbl,x
 
-    clc                     ;Move pointer to start of next token
+    ldy #0                  ;Check if first extended function
+:   lda (token_ptr),y
+    cmp token_ext_func_head,y
+    bne :+
+    iny
+    cpy #5
+    bne :-
+    inc extended_flag
+    stx token_count_ext_stm ;Store index of last extended statement
+
+:   clc                     ;Move pointer to start of next token
     lda token_ptr
     adc len
     sta token_ptr
@@ -119,10 +129,12 @@ endoftoken:
 
 endoflist:
     lda extended_flag       ;Check if we have read the extended tokens
-    bne :+
+    cmp #2                  ;2=extended functions have been read too
+    bcs exit
+    cmp #0
+    bne next_ext_list
     
-    stx token_count_std     ;We hadn't, store number of standard tokens
-    inc extended_flag       ;Set flag that we now start to read extended tokens
+    stx token_count_std     ;Store number of standard tokens
 
     lda token_exttbl_start  ;Set pointer to start of token table in BASIC ROM
     sta token_ptr
@@ -131,10 +143,21 @@ endoflist:
     
     ldy #0                  ;Prepare for next token
     stz cs                  ;Reset checksum counter
-    bra loop
 
-:   stx token_count_ext     ;Store index of last extended token + 1
+    inc extended_flag       ;Set flag that we now start to read extended tokens
+    jmp loop
 
+next_ext_list:
+    ldy #0                  ;Prepare for next token
+    stz cs                  ;Reset checksum counter
+    inc token_ptr
+    beq :+
+    jmp loop
+:   inc token_ptr+1
+    jmp loop
+
+exit:   
+    stx token_count_ext_func     ;Store index of last extended function
     rts
 
 .segment "VARS"
@@ -220,8 +243,8 @@ loop:
 :   ldx tokenid
 
 nexttoken:
-    inx                     ;Increase token id
-    cpx token_count_ext     ;If we reach this token id, we're done searching...
+    inx                         ;Increase token id
+    cpx token_count_ext_func     ;If we reach this token id, we're done searching...
     bcc loop
 
 nomatch:
@@ -246,12 +269,25 @@ ismatch:
     rts
 
     ;Extended token (X16 additions), implemented by two bytes, a prefix $ce, and then a token id
-:   sec
+:   cmp token_count_ext_stm
+    beq :+
+    bcs :++
+
+:   sec                         ;Extended statement
     sbc token_count_std
     clc
-    adc #$80        ;Store extended token id in X
+    adc #$80        
     tax             
-    lda #$ce        ;Store prefix in A
+    lda #$ce 
+    ldy len
+    rts
+
+:   sec                         ;Extended function
+    sbc token_count_ext_stm
+    clc
+    adc #$d0
+    tax
+    lda #$ce
     ldy len
     rts
 
@@ -323,8 +359,9 @@ found:
 .endproc
 
 .segment "VARS"
-    token_count_std: .res 1         ;Holds index of last standard token + 1
-    token_count_ext: .res 1         ;Holds index of last extended token + 1
+    token_count_std: .res 1         ;Holds index of last standard token
+    token_count_ext_stm: .res 1     ;Holds index of last extended statement
+    token_count_ext_func: .res 1    ;Holds index of last extended function
     token_maxlen: .res 1            ;Holds the length of the longest token
     token_stdtbl_start: .res 2      ;Pointer to start of first standard token in BASIC ROM
     token_exttbl_start: .res 2      ;Pointer to start of first extended token in BASIC ROM
@@ -340,3 +377,6 @@ token_stdtbl_head:
 
 token_exttbl_head:
     .byt "mo", 'n' + $80, "do", 's' + $80
+
+token_ext_func_head:
+    .byt "vpee", 'k' + $80
