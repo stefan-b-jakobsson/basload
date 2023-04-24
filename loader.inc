@@ -196,6 +196,7 @@ eof1:
     jsr line_init
 
     ;Open source file
+    jsr file_close
     jsr file_open
 
     ;Read and process each line again

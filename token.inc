@@ -24,6 +24,7 @@
 ;OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+.export token_ptr
 .ZEROPAGE
     token_ptr: .res 2
 .CODE
@@ -40,6 +41,8 @@
 ;Errors.......: Nothing
 .proc token_init
     ;Store current ROM bank on stack, and select BASIC ROM bank (=4)
+    lda ROM_SEL
+    pha
     lda #4
     sta ROM_SEL
 
@@ -158,6 +161,8 @@ next_ext_list:
 
 exit:   
     stx token_count_ext_func     ;Store index of last extended function
+    pla
+    sta ROM_SEL
     rts
 
 .segment "VARS"
@@ -270,10 +275,9 @@ ismatch:
 
     ;Extended token (X16 additions), implemented by two bytes, a prefix $ce, and then a token id
 :   cmp token_count_ext_stm
-    beq :+
-    bcs :++
+    bcs :+
 
-:   sec                         ;Extended statement
+    sec                         ;Extended statement
     sbc token_count_std
     clc
     adc #$80        
