@@ -1,7 +1,7 @@
 Modules list:
 -------------
 main.o:
-    CODE              Offs=000000  Size=000D82  Align=00001  Fill=0000
+    CODE              Offs=000000  Size=000D8A  Align=00001  Fill=0000
     ZEROPAGE          Offs=000000  Size=000010  Align=00001  Fill=0000
     VARS              Offs=000000  Size=000165  Align=00001  Fill=0000
     LCODE             Offs=000000  Size=000115  Align=00001  Fill=0000
@@ -20,7 +20,7 @@ VARS                  000400  000564  000165  00001
 LOADADDR              0007FF  000800  000002  00001
 EXEHDR                000801  00080C  00000C  00001
 LCODE                 00080D  000921  000115  00001
-CODE                  009000  009D81  000D82  00001
+CODE                  009000  009D89  000D8A  00001
 
 
 Exports list by name:

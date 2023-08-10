@@ -95,7 +95,7 @@ exit:
 
 msg:
     .byt 13, .sprintf("*** basload %u.%u.%u ***", appversion_major, appversion_minor, appversion_patch), 13
-    .byt "(c) 2021-2022, stefan jakobsson", 13, 13
+    .byt "(c) 2021-2023, stefan jakobsson", 13, 13
     .byt "program copied to memory address $9000",13
     .byt "list of commands:",13
     .byt " !l or sys$9000 - load basic program from file",13

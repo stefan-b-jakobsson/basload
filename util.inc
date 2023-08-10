@@ -115,6 +115,12 @@ loop:
     cpy #5
     bne :-
 
+    ;Clear output
+    ldx #9
+:   stz output,x
+    dex
+    bne :-
+
     ldx #4      ;Byte index, start with rightmost byte (MSB)
     ldy #0      ;Char index, start from left
 
