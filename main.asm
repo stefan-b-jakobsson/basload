@@ -39,6 +39,15 @@
 ;Output.......: Nothing
 ;Errors.......: Nothing
 .proc main_setup
+    ;Set BASIC memory top
+    sec
+    jsr KERNAL_MEMTOP       ; Read current values, we need banked RAM top return in .A
+
+    ldx #$00                ; Set BASIC memory top to $9000
+    ldy #$90
+    clc
+    jsr KERNAL_MEMTOP
+
     ;Copy main program to address $9000-
     lda #<main_lcode_end
     sta TEMP1
@@ -128,6 +137,7 @@ main_lcode_end:
 .proc main_wedge_parser
     ;Check if start of wedge command
     jsr BASIC_CHRGET    ;Get next char
+    
     cmp #'!'
     beq :+              ;Yes, continue
     jmp (BASIC_NGONE1)  ;No, exit
@@ -137,6 +147,7 @@ main_lcode_end:
     beq load
     cmp #'e'            ;!e => X16 Edit
     beq editor
+    
     jmp (BASIC_NGONE1)  ;Unkwon command, will result in ?SYNTAX ERROR
 
 load:
@@ -148,6 +159,9 @@ editor:
     jmp (BASIC_NGONE)
 
 .endproc
+
+BASIC_NGONE: .res 2
+BASIC_NGONE1: .res 2
 
 .include "file.inc"
 .include "ui.inc"

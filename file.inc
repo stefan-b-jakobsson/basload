@@ -28,6 +28,7 @@
     file_device: .res 1         ;Device number
     file_err: .res 1            ;I/O error code
     file_buf: .res 256          ;Input buffer
+    prevchar: .res 1
 .CODE
 
 file_name: .res 256         ;File name
@@ -82,6 +83,8 @@ file_len: .res 1            ;Length of file name
     ldx #1
     jsr KERNAL_CHKIN
 
+    stz prevchar
+
     lda #0
     rts
 
@@ -119,9 +122,16 @@ err:
 loop:
     ;Read char from file
     jsr KERNAL_CHRIN
+    ldx prevchar
+    sta prevchar
+
     cmp #10                 ;LF
-    beq eol
-    cmp #13                 ;CR
+    bne :+
+    cpx #13
+    beq next
+    bra eol
+
+:   cmp #13                 ;CR
     beq eol
 
     ;Check line length
@@ -166,6 +176,7 @@ store_char:
     sta file_buf,x
     inc index
 
+next:
     ;Read file status
     jsr KERNAL_READST
     cmp #0                  ;Status = 0 => Continue reading

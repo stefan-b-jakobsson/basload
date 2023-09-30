@@ -237,6 +237,4 @@ eof2:
     jmp file_readln
 .endproc
 
-.segment "VARS"
-    loader_loadflag: .byt 0
-.CODE
+loader_loadflag: .byt 0
