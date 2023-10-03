@@ -311,10 +311,12 @@ chk_labeldef:               ;Check if we are at start of a label definition; if 
     stz count_chars_after_label
     jmp loop
 
-chk_labelref:                   ;After GOTO, GOSUB and THEN there may be a label reference, check that
+chk_labelref:                   ;After GOTO, GOSUB, THEN, and RESTORE there may be a label reference, check that
     lda last_token
     cmp #$a7                    ;THEN token id
-    beq then_label
+    beq then_restore_label
+    cmp #$8c                    ;RESTORE token id
+    beq then_restore_label
     cmp #$89                    ;GOTO token id
     beq :+
     cmp #$8d                    ;GOSUB token id
@@ -374,7 +376,7 @@ chk_labelref:                   ;After GOTO, GOSUB and THEN there may be a label
     inc count_labels
     jmp loop
 
-then_label:                     ;After THEN there can be a label ref or any other statement, therefore different to GOTO/GOSUB where there must be a label ref
+then_restore_label:             ;After THEN there can be a label ref or any other statement; after RESTORE there can also be a label ref, therefore different to GOTO/GOSUB where there must be a label ref
     ldx index_src
     jsr label_get
     cmp #0
