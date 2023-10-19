@@ -261,11 +261,19 @@ loop:
     bne chk_rem
     jmp eol                 ;Last char was 0 => end of line
 
-chk_rem:                    ;After a REM statement, just copy the rest of the line unaltered
+chk_rem:                    ;Ignore REM statements
     ldy last_token
     cpy #$8f
+    bne chk_data
+    jmp next
+
+chk_data:                   ;After a DATA statement, copy the rest of the line unaltered until a possible colon is encountered
+    cpy #$83
     bne chk_blnk
-    jmp copy
+    cmp #':'
+    bne :+
+    stz last_token          ;Reset last_token after colon
+:   jmp copy
 
 chk_blnk:                   ;Check if last char was a blank space or tab; if yes ignore if outside string, copy to destination if within string
     cmp #32
@@ -418,10 +426,24 @@ chk_token:                      ;Check if we are at start of a BASIC command tha
     beq copy
 
     phy                         ;Store token length on stack
+    
+    sta last_token              ;Remember last token
+    
+    cmp #$8f                    ;Ignore REM token
+    bne :+
+    dec count_chars_after_label
+    
+    ldy index_dst               ;Remove possible colon before REM statement
+    dey
+    lda (line_code),y
+    cmp #':'
+    bne :++
+    sty index_dst
 
-    ldy index_dst               ;Store standard token
+    bra :++
+
+:   ldy index_dst               ;Store standard token
     sta (line_code),y
-    sta last_token
     inc index_dst
 
     cmp #$ce                    ;Store extended token, if applicable
