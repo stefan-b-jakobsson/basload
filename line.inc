@@ -519,15 +519,9 @@ eol:                            ;End of line handling,
     lda nxtlinptr
     adc #4
     sta line_code
-    sta KERNAL_VARTAB
-    sta KERNAL_ARYTAB
-    sta KERNAL_STREND
     lda nxtlinptr+1
     adc #0
     sta line_code+1
-    sta KERNAL_VARTAB+1
-    sta KERNAL_ARYTAB+1
-    sta KERNAL_STREND+1
 
     lda #0                      
     ldy #0
