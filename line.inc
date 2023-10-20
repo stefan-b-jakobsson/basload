@@ -433,6 +433,7 @@ chk_token:                      ;Check if we are at start of a BASIC command tha
     bne :+
     dec count_chars_after_label
     
+    beq :+                      ;REM statement was at beginning of line, continue
     ldy index_dst               ;Remove possible colon before REM statement
     dey
     lda (line_code),y
