@@ -218,6 +218,14 @@ eof2:
     jsr line_pass2
     cmp #0
     bne err2
+    lda line_code
+    sta KERNAL_VARTAB
+    sta KERNAL_ARYTAB
+    sta KERNAL_STREND
+    lda line_code+1
+    sta KERNAL_VARTAB+1
+    sta KERNAL_ARYTAB+1
+    sta KERNAL_STREND+1
 
     ;We're done
     jsr file_close

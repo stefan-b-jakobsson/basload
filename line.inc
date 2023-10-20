@@ -520,11 +520,9 @@ eol:                            ;End of line handling,
     lda nxtlinptr
     adc #4
     sta line_code
-    sta KERNAL_VARTAB
     lda nxtlinptr+1
     adc #0
     sta line_code+1
-    sta KERNAL_VARTAB+1
 
     lda #0                      
     ldy #0
