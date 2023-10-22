@@ -83,6 +83,7 @@
     stz label_found
     stz count_chars
     stz count_chars_after_label
+    stz lasttoken
 
     ;Increase line numbers
     inc line_srclin
@@ -124,8 +125,14 @@ eol:
     rts
 
 checks:
+    ;Check if within REM statement
+    ldy lasttoken
+    cpy #$8f
+    bne :+
+    jmp next
+
     ;Check if blank space
-    cmp #32
+:   cmp #32
     bne :+
     jmp next
 :   cmp #9  ;Tab
@@ -149,14 +156,18 @@ checks:
     jsr label_val_def
     sty len
     cpy #0
-    beq next
+    beq chk_token
 
     ldx index_src               ;Check if it's a reserved token
     jsr token_get
     cpy len
-    beq next
+    bne :+
+    cmp #$8f
+    sta lasttoken
+    dec count_chars_after_label
+    bra next
 
-    ldx index_src               ;Store label
+:   ldx index_src               ;Store label
     jsr label_add
 
     cmp #1                      ;Label not found in file_buf. Should not happen due to previous tests
@@ -201,6 +212,16 @@ checks:
     ldy #>msg_label_too_long
     lda #%00010000
     jsr ui_msg
+    bra next
+
+chk_token:
+    ldx index_src
+    jsr token_get
+    beq next
+    sta lasttoken
+    cmp #$8f
+    bne next
+    dec count_chars_after_label
 
 next:
     inc index_src
@@ -212,6 +233,7 @@ next:
     count_chars: .res 1
     count_chars_after_label: .res 1
     len: .res 1
+    lasttoken: .res 1
 .CODE
 .endproc
 
@@ -267,10 +289,16 @@ chk_rem:                    ;Ignore REM statements
     bne chk_data
     jmp next
 
-chk_data:                   ;After a DATA statement, copy the rest of the line unaltered until a possible colon is encountered
-    cpy #$83
+chk_data:                   
+    cpy #$83                ;Was last token DATA?
     bne chk_blnk
-    cmp #':'
+    tay
+    lda count_quotes        ;Are we in quote mode?
+    lsr
+    bcs :+
+    tya
+    bne :+                  ;Yes, continue copying data
+    cmp #':'                ;No, a colon should break the DATA statement
     bne :+
     stz last_token          ;Reset last_token after colon
 :   jmp copy
@@ -426,21 +454,20 @@ chk_token:                      ;Check if we are at start of a BASIC command tha
     beq copy
 
     phy                         ;Store token length on stack
-    
     sta last_token              ;Remember last token
     
     cmp #$8f                    ;Ignore REM token
     bne :+
+
     dec count_chars_after_label
-    
-    beq :+                      ;REM statement was at beginning of line, continue
+    bra :++
     ldy index_dst               ;Remove possible colon before REM statement
+    beq :++
     dey
-    lda (line_code),y
+    lda (line_code),y   
     cmp #':'
     bne :++
     sty index_dst
-
     bra :++
 
 :   ldy index_dst               ;Store standard token
