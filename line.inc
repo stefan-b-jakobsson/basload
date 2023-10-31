@@ -34,6 +34,12 @@
     line_dstlin: .res 2
 .CODE
 
+REM_STMT = $8f
+THEN_STMT = $a7
+RESTORE_STMT = $8c
+GOTO_STMT = $89
+GOSUB_STMT = $8d
+
 ;******************************************************************************
 ;Function name: line_init
 ;Purpose......: Initializes all pointers to start values, to be called once 
@@ -125,14 +131,12 @@ eol:
     rts
 
 checks:
-    ;Check if within REM statement
-    ldy lasttoken
+    ldy lasttoken               ;Check if within REM statement
     cpy #$8f
     bne :+
     jmp next
 
-    ;Check if blank space
-:   cmp #32
+:   cmp #32                     ;Check if blank space
     bne :+
     jmp next
 :   cmp #9  ;Tab
@@ -144,26 +148,27 @@ checks:
     ;Check if label def
     ldy label_found
     beq :+
-    jmp next
+    jmp chk_token
 
-:   ldy count_chars
+:   ldy count_chars             ;Check that first non-white space char
     cpy #1
     beq :+
     jmp next
 
-    ;Check if token
 :   ldx index_src               ;Get possible label def length
     jsr label_val_def
     sty len
-    cpy #0
+    cpy #0                      ;Not a label definition
     beq chk_token
 
     ldx index_src               ;Check if it's a reserved token
     jsr token_get
     cpy len
-    bne :+
-    cmp #$8f
-    sta lasttoken
+    bne :+                      ;A possible token is not the same length, treat it as a label def
+
+    sta lasttoken               ;It is a token?
+    cmp #REM_STMT               ;Is it a REM statement
+    bne next
     dec count_chars_after_label
     bra next
 
@@ -215,11 +220,11 @@ checks:
     bra next
 
 chk_token:
-    ldx index_src
+    ldx index_src               ;Check if at REM token
     jsr token_get
     beq next
     sta lasttoken
-    cmp #$8f
+    cmp #REM_STMT
     bne next
     dec count_chars_after_label
 
@@ -349,13 +354,13 @@ chk_labeldef:               ;Check if we are at start of a label definition; if 
 
 chk_labelref:                   ;After GOTO, GOSUB, THEN, and RESTORE there may be a label reference, check that
     lda last_token
-    cmp #$a7                    ;THEN token id
+    cmp #THEN_STMT              ;THEN token id
     beq then_restore_label
-    cmp #$8c                    ;RESTORE token id
+    cmp #RESTORE_STMT           ;RESTORE token id
     beq then_restore_label
-    cmp #$89                    ;GOTO token id
+    cmp #GOTO_STMT              ;GOTO token id
     beq :+
-    cmp #$8d                    ;GOSUB token id
+    cmp #GOSUB_STMT             ;GOSUB token id
     beq :+
     jmp chk_token
 
