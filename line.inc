@@ -460,11 +460,11 @@ chk_token:                      ;Check if we are at start of a BASIC command tha
     bne :+
 
     dec count_chars_after_label
-    bra :++
+    beq :++
     ldy index_dst               ;Remove possible colon before REM statement
     beq :++
     dey
-    lda (line_code),y   
+    lda (line_code),y
     cmp #':'
     bne :++
     sty index_dst
