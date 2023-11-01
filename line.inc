@@ -113,11 +113,11 @@ DATA_STMT = $83
     rts
 
 loop:
-    lda count_chars_after_label
+    lda count_chars_after_label         ;If we have two chars or more after label we need not look any further in pass 1
     cmp #2
     bcs eol
 
-    ldx index_src
+    ldx index_src                       ;Get next char
     lda file_buf,x
 
     bne checks
