@@ -39,6 +39,7 @@ THEN_STMT = $a7
 RESTORE_STMT = $8c
 GOTO_STMT = $89
 GOSUB_STMT = $8d
+DATA_STMT = $83
 
 ;******************************************************************************
 ;Function name: line_init
@@ -112,6 +113,10 @@ GOSUB_STMT = $8d
     rts
 
 loop:
+    lda count_chars_after_label
+    cmp #2
+    bcs eol
+
     ldx index_src
     lda file_buf,x
 
@@ -132,14 +137,14 @@ eol:
 
 checks:
     ldy lasttoken               ;Check if within REM statement
-    cpy #$8f
+    cpy #REM_STMT
     bne :+
     jmp next
 
-:   cmp #32                     ;Check if blank space
+:   cmp #32                     ;Check if white space
     bne :+
     jmp next
-:   cmp #9  ;Tab
+:   cmp #9
     bne :+
     jmp next
 :   inc count_chars
@@ -150,29 +155,40 @@ checks:
     beq :+
     jmp chk_token
 
-:   ldy count_chars             ;Check that first non-white space char
+:   ldy count_chars             ;Check if first non white space char
     cpy #1
     beq :+
-    jmp next
+    jmp chk_token
 
 :   ldx index_src               ;Get possible label def length
     jsr label_val_def
     sty len
     cpy #0                      ;Not a label definition
-    beq chk_token
+    bne :+
+    jmp chk_token
 
-    ldx index_src               ;Check if it's a reserved token
+:   ldx index_src               ;Check if it's a reserved token
     jsr token_get
     cpy len
-    bne :+                      ;A possible token is not the same length, treat it as a label def
+    bne store_label             ;A possible token is not the same length, treat it as a label def
 
-    sta lasttoken               ;It is a token?
-    cmp #REM_STMT               ;Is it a REM statement
+    sta lasttoken               ;It was a token
+    cmp #REM_STMT               ;Is it a REM statement?
+    beq :+
+    jmp next
+:   dec count_chars_after_label
+    bne :+
+    jmp next
+    
+:   ldx index_src               ;Look for a possible colon before REM statement
+    lda file_buf-1,x
+    cmp #':'
     bne next
     dec count_chars_after_label
     bra next
 
-:   ldx index_src               ;Store label
+store_label:
+    ldx index_src               ;Store label
     jsr label_add
 
     cmp #1                      ;Label not found in file_buf. Should not happen due to previous tests
@@ -220,11 +236,20 @@ checks:
     bra next
 
 chk_token:
-    ldx index_src               ;Check if at REM token
+    ldx index_src               ;Check if REM token
     jsr token_get
     beq next
+    
     sta lasttoken
+
     cmp #REM_STMT
+    bne next
+    dec count_chars_after_label
+    beq next
+
+    ldx index_src
+    lda file_buf-1,x
+    cmp #':'
     bne next
     dec count_chars_after_label
 
@@ -257,7 +282,6 @@ next:
     stz index_dst
     stz count_quotes
     stz count_chars
-    stz count_chars_after_label
     stz count_labels
 
     ;Increase source line counter
@@ -290,19 +314,18 @@ loop:
 
 chk_rem:                    ;Ignore REM statements
     ldy last_token
-    cpy #$8f
+    cpy #REM_STMT
     bne chk_data
     jmp next
 
 chk_data:                   
-    cpy #$83                ;Was last token DATA?
+    cpy #DATA_STMT          ;Was last token DATA?
     bne chk_blnk
     tay
     lda count_quotes        ;Are we in quote mode?
     lsr
     bcs :+
     tya
-    bne :+                  ;Yes, continue copying data
     cmp #':'                ;No, a colon should break the DATA statement
     bne :+
     stz last_token          ;Reset last_token after colon
@@ -321,7 +344,6 @@ chk_blnk:                   ;Check if last char was a blank space or tab; if yes
 :   jmp copy
 
 :   inc count_chars
-    inc count_chars_after_label
 
 chk_quote:                  ;Check if last char was a double quote; if yes, increase counter
     cmp #34
@@ -349,7 +371,6 @@ chk_labeldef:               ;Check if we are at start of a label definition; if 
     adc index_src
     ina
     sta index_src
-    stz count_chars_after_label
     jmp loop
 
 chk_labelref:                   ;After GOTO, GOSUB, THEN, and RESTORE there may be a label reference, check that
@@ -461,11 +482,9 @@ chk_token:                      ;Check if we are at start of a BASIC command tha
     phy                         ;Store token length on stack
     sta last_token              ;Remember last token
     
-    cmp #$8f                    ;Ignore REM token
+    cmp #REM_STMT               ;Ignore REM token
     bne :+
 
-    dec count_chars_after_label
-    beq :++
     ldy index_dst               ;Remove possible colon before REM statement
     beq :++
     dey
@@ -504,7 +523,7 @@ next:                           ;Moves to next char on the current line
     jmp loop
 
 eol:                            ;End of line handling, 
-    lda count_chars_after_label
+    lda index_dst
     bne :++
     
     lda line_dstlin             ;No BASIC statement on the current line (blank or only label definition) - decrease destination line counter as we are not outputting anything
@@ -571,7 +590,6 @@ eol:                            ;End of line handling,
     nxtlinptr: .res 2
     count_quotes: .res 1
     count_chars: .res 1
-    count_chars_after_label: .res 1
     count_labels: .res 1
     last_token: .res 1
 .CODE
