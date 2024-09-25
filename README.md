@@ -1,5 +1,11 @@
 # BASLOAD
 
+## Obsolete project
+
+BASLOAD started out as this RAM based tool. As no further development is planned, it is marked as obsolete.
+
+Development continues of the ROM based tool. Visit [basload-rom](https://github.com/stefan-b-jakobsson/basload-rom).
+
 ## Introduction
 
 BASLOAD is made in 65C02 assembly for the Commander X16 platform that was devised by David Murray, a.k.a. the 8-Bit Guy.
